@@ -1,0 +1,61 @@
+# Plotra Platform - Docker Compose
+# Simplified version for Windows compatibility
+
+services:
+  # PostgreSQL with PostGIS
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: plotra-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: plotra_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: plotra-backend
+    environment:
+      - KIPAWA_DB_HOST=postgres
+      - KIPAWA_DB_PORT=5432
+      - KIPAWA_DB_USER=postgres
+      - KIPAWA_DB_PASSWORD=postgres
+      - KIPAWA_DB_NAME=plotra_db
+      - KIPAWA_SECRET_KEY=development-key-change-in-production
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Dashboard
+  dashboard:
+    image: nginx:alpine
+    container_name: plotra-dashboard
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend/dashboard:/usr/share/nginx/html
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads_data:

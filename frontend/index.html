@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plotra - Parcel-Based EUDR Compliance & Traceability</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2d5016;
+            --primary-light: #4a7c24;
+            --secondary: #8b5a2b;
+            --accent: #f4ece1;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand img {
+            height: 40px;
+        }
+
+        .btn-plotra-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 15px rgba(45, 80, 22, 0.3);
+        }
+
+        .btn-plotra-primary:hover {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(45, 80, 22, 0.4);
+            color: white;
+        }
+
+        .btn-plotra-outline {
+            border: 3px solid var(--primary);
+            color: var(--primary);
+            background: transparent;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-plotra-outline:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(45, 80, 22, 0.3);
+        }
+
+        .btn-secondary-brown {
+            background: linear-gradient(135deg, var(--secondary) 0%, #a67c52 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-secondary-brown:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(139, 90, 43, 0.4);
+            color: white;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            padding: 140px 0 100px;
+            background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: var(--text-dark);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: 1.35rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            line-height: 1.7;
+            max-width: 550px;
+        }
+
+        /* Section Styles */
+        .section-padding {
+            padding: 100px 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        /* Feature Cards */
+        .feature-item {
+            padding: 2rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        }
+
+        .feature-number {
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-item h4 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-item p {
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+
+        /* Image Placeholder */
+        .image-placeholder {
+            background: linear-gradient(135deg, #e8e4dc 0%, #d4cfc2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-placeholder::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23ccc" x="10" y="10" width="20" height="20" rx="5"/><rect fill="%23bbb" x="40" y="10" width="20" height="20" rx="5"/><rect fill="%23aaa" x="70" y="10" width="20" height="20" rx="5"/><rect fill="%23bbb" x="10" y="40" width="20" height="20" rx="5"/><rect fill="%23aaa" x="40" y="40" width="20" height="20" rx="5"/><rect fill="%23999" x="70" y="40" width="20" height="20" rx="5"/><rect fill="%23aaa" x="10" y="70" width="20" height="20" rx="5"/><rect fill="%23999" x="40" y="70" width="20" height="20" rx="5"/><rect fill="%23888" x="70" y="70" width="20" height="20" rx="5"/></svg>');
+            background-size: 30px 30px;
+            opacity: 0.3;
+        }
+
+        .image-placeholder span {
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
+        }
+
+        /* Info Cards */
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            height: 100%;
+        }
+
+        .info-card h4 {
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .info-card p {
+            color: var(--text-muted);
+            margin-bottom: 0;
+        }
+
+        /* List Styles */
+        .check-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .check-list li {
+            padding: 0.75rem 0;
+            padding-left: 2rem;
+            position: relative;
+            color: var(--text-muted);
+            border-bottom: 1px solid #eee;
+        }
+
+        .check-list li:last-child {
+            border-bottom: none;
+        }
+
+        .check-list li::before {
+            content: '\f26e';
+            font-family: 'bootstrap-icons';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* Quote/Highlight */
+        .highlight-box {
+            background: var(--accent);
+            border-radius: 16px;
+            padding: 2.5rem;
+            border-left: 5px solid var(--primary);
+        }
+
+        .highlight-box p {
+            font-size: 1.15rem;
+            font-style: italic;
+            color: var(--text-dark);
+            margin-bottom: 0;
+            line-height: 1.7;
+        }
+
+        /* Principles Grid */
+        .principle-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .principle-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+        }
+
+        .principle-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--accent);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .principle-card h5 {
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .principle-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 0;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 100px 0;
+            background: var(--primary);
+            color: white;
+        }
+
+        .cta-section h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            font-size: 1.15rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 80px 0 30px;
+        }
+
+        .footer-brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .footer-tagline {
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 2rem;
+        }
+
+        .footer-heading {
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .footer-link {
+            color: rgba(255,255,255,0.6);
+            text-decoration: none;
+            display: block;
+            padding: 0.4rem 0;
+            transition: color 0.2s;
+        }
+
+        .footer-link:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 2rem;
+            margin-top: 3rem;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .section-padding {
+                padding: 60px 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 100px 0 60px;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .section-header h2 {
+                font-size: 1.75rem;
+            }
+
+            .image-placeholder {
+                min-height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <img src="Logo_for_coffee_202604042236.jpeg" alt="Plotra Logo" class="me-2">
+                <span class="fw-bold text-dark fs-4">Plotra</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link px-3" href="#how-it-works">How It Works</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#importers">For Importers</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#cooperatives">Cooperatives</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#governance">Data Governance</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#about">About</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a href="dashboard/index.html" class="btn btn-plotra-outline">Log In</a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        <a href="dashboard/index.html" class="btn btn-plotra-primary">Get Started</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <h1 class="hero-title">Plotra</h1>
+                    <h2 class="hero-title" style="font-size: 2.5rem; color: var(--primary);">Parcel-based infrastructure for EUDR compliance and supply chain traceability</h2>
+                    <p class="hero-subtitle">Plotra structures the data behind smallholder agriculture — linking land, production, and cooperative verification into auditable records that meet regulatory requirements.</p>
+                    <p class="hero-subtitle" style="font-size: 1.1rem;">It works with the realities of fragmented land, mixed systems, and incomplete data. It does not require perfect inputs. It structures them.</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="#importers" class="btn btn-secondary-brown">For Importers</a>
+                        <a href="#cooperatives" class="btn btn-plotra-outline">For Cooperatives</a>
+                    </div>
+                </div>
+                <div class="col-lg-5 mt-5 mt-lg-0">
+                    <div class="image-placeholder">
+                        <span>[Hero Image - Add image here]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="section-padding bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2>How It Works</h2>
+                <p>Three things Plotra does</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-number">1</div>
+                        <h4>Structures land first</h4>
+                        <p>Every farm is mapped as a parcel. All records — deliveries, documents, compliance data — are anchored to that parcel identity. This is what makes traceability verifiable rather than claimed.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-number">2</div>
+                        <h4>Verifies in layers</h4>
+                        <p>Field-captured data passes through cooperative review, geospatial and environmental analysis, and system-level quality checks. Each layer builds on the last.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <div class="feature-number">3</div>
+                        <h4>Corrects rather than rejects</h4>
+                        <p>When gaps or inconsistencies arise, Plotra opens a structured rectification process. Records are corrected, re-linked, and completed — without discarding valid production data.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="image-placeholder" style="min-height: 300px;">
+                        <span>[How It Works Diagram - Add image here]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- For Importers -->
+    <section id="importers" class="section-padding">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="section-title">For Importers</h2>
+                    <h3 class="section-subtitle">Compliance you can rely on — built for real supply chains</h3>
+                    <p class="text-muted mb-4">EUDR compliance requires more than documentation. It requires a clear, verifiable link between a commodity and the land it came from — supported by auditable records and consistent data structures.</p>
+                    <p class="text-muted mb-4">Plotra supports importers depending on where their supply chain data currently stands.</p>
+                    
+                    <div class="highlight-box mb-4">
+                        <p>If your suppliers have no structured data, Plotra builds it from the ground up — farmer and parcel registration, geospatial mapping, polygon validation, satellite-supported verification, cooperative validation workflows, and DDS-ready outputs.</p>
+                    </div>
+                    
+                    <div class="highlight-box mb-4">
+                        <p>If you already receive geolocation data or supplier declarations, Plotra provides a structured intake and validation layer. Geodata is normalised, documents are linked, inconsistencies are resolved, and DDS-ready outputs are generated — without replacing your existing supplier relationships.</p>
+                    </div>
+                    
+                    <div class="highlight-box mb-4">
+                        <p>If you need geospatial analysis only, Plotra can assess existing polygon data — validating structure, checking deforestation-free status, interpreting canopy and intercropping systems, and identifying boundary issues — without requiring full system integration.</p>
+                    </div>
+                </div>
+                <div class="col-lg-5 offset-lg-1 mt-5 mt-lg-0">
+                    <div class="image-placeholder" style="min-height: 450px;">
+                        <span>[For Importers Image - Add image here]</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-lg-6">
+                    <h4 class="mb-4">Why Plotra is Different</h4>
+                    <p class="text-muted mb-4">Most compliance systems filter data — records are accepted or rejected. That works in standardised supply chains. It breaks down in smallholder systems.</p>
+                    <ul class="check-list">
+                        <li><strong>Parcel-first architecture</strong> — compliance is anchored in land identity, not documents or shipments</li>
+                        <li><strong>Rectification workflows</strong> — errors are structured, corrected, and versioned instead of triggering exclusion</li>
+                        <li><strong>Climate-aware interpretation</strong> — agroforestry, intercropping, and canopy systems are interpreted over time, reducing false risk signals</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 mt-5 mt-lg-0">
+                    <h4 class="mb-4">Operational Impact</h4>
+                    <ul class="check-list">
+                        <li>Reduced compliance risk</li>
+                        <li>Structured, audit-ready datasets</li>
+                        <li>Less manual reconciliation of supplier inputs</li>
+                        <li>The ability to work with real supply chains, not idealised ones</li>
+                    </ul>
+                    <div class="mt-4">
+                        <a href="#" class="btn btn-plotra-primary">Request a Quotation</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data for Importers -->
+    <section class="section-padding bg-light">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-5">
+                    <div class="image-placeholder" style="min-height: 350px;">
+                        <span>[Data You Can Rely On - Add image here]</span>
+                    </div>
+                </div>
+                <div class="col-lg-6 offset-lg-1 mt-5 mt-lg-0">
+                    <h2 class="section-title">Data You Can Rely On</h2>
+                    <p class="text-muted">Plotra provides importers with access to structured compliance records through a dedicated interface — parcel-linked datasets, linked documentation, DDS-ready submissions, and audit logs — so records remain accessible and organised for future use, regulatory audits, and continuity across reporting cycles.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- For Cooperatives -->
+    <section id="cooperatives" class="section-padding">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="section-title">For Cooperatives & Exporters</h2>
+                    <h3 class="section-subtitle">Making smallholder trade legible</h3>
+                    <p class="text-muted mb-4">Plotra is built for the realities of smallholder agriculture — fragmented plots, shared boundaries, customary tenure, and agroforestry systems where multiple crops grow under a single canopy. These are not exceptions. They are the norm.</p>
+                    <p class="text-muted mb-4">When compliance systems fail to account for this complexity, valid farms appear incomplete and producers risk exclusion — not because of wrongdoing, but because their reality does not fit simplified models. Plotra addresses this directly.</p>
+                    
+                    <h4 class="mb-3">What It Means in Practice</h4>
+                    <ul class="check-list">
+                        <li>Each farm is mapped as a parcel with a clear identity</li>
+                        <li>Production data is linked to that parcel and verified through cooperative review</li>
+                        <li>Issues are corrected through structured rectification, not rejected</li>
+                        <li>Compliance outputs are generated in formats compatible with EUDR requirements</li>
+                    </ul>
+                </div>
+                <div class="col-lg-5 offset-lg-1 mt-5 mt-lg-0">
+                    <div class="image-placeholder" style="min-height: 450px;">
+                        <span>[For Cooperatives Image - Add image here]</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-lg-6">
+                    <h4 class="mb-4">From Compliance to Value</h4>
+                    <p class="text-muted mb-4">When compliance data is structured at the level of land and production practices, it creates the conditions for something more. Farms adopting agroforestry or intercropping often receive no economic recognition for those practices. Plotra captures this data from the outset — creating the foundation for differentiated pricing and value recognition tied to verified production.</p>
+                    <ul class="check-list">
+                        <li>Differentiation of supply based on land management</li>
+                        <li>Development of premium structures linked to verified practices</li>
+                        <li>Integration of resilience signals into sourcing decisions</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 mt-5 mt-lg-0">
+                    <h4 class="mb-4">What This Means for Farmers</h4>
+                    <ul class="check-list">
+                        <li>Their farm remains visible within the system</li>
+                        <li>Their production is linked to their land and cooperative</li>
+                        <li>Their data supports access to market and is not used beyond it</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data Governance -->
+    <section id="governance" class="section-padding bg-light">
+        <div class="container">
+            <div class="section-header">
+                <h2>Data Governance</h2>
+                <p>Plotra Data Principles</p>
+            </div>
+            
+            <div class="highlight-box mb-5">
+                <p><strong>Data should support participation in trade — not create dependency or extraction.</strong></p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="principle-card">
+                        <div class="principle-icon"><i class="bi bi-bullseye"></i></div>
+                        <h5>Purpose-Limited Data Use</h5>
+                        <p>Data is collected and used only for supply-chain functions including EUDR compliance, traceability, and value attribution linked to production practices. It is not used for profiling, advertising, or resale.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="principle-card">
+                        <div class="principle-icon"><i class="bi bi-people"></i></div>
+                        <h5>Farmer and Cooperative Access</h5>
+                        <p>Farmers and cooperatives retain access to parcel-linked data associated with their participation. Records can be retrieved and exported in standard formats for use across buyers, markets, and compliance processes.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="principle-card">
+                        <div class="principle-icon"><i class="bi bi-shield-x"></i></div>
+                        <h5>No Extractive Data Practices</h5>
+                        <p>Data generated within Plotra is not bundled, resold, or converted into standalone commercial datasets. It remains linked to the supply-chain context in which it was created.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="principle-card">
+                        <div class="principle-icon"><i class="bi bi-arrow-repeat"></i></div>
+                        <h5>Interoperability and Portability</h5>
+                        <p>Standard data formats and interoperable structures allow compliance datasets, parcel records, and verification outputs to be shared across regulatory, commercial, and cooperative systems.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="principle-card">
+                        <div class="principle-icon"><i class="bi bi-file-earmark-text"></i></div>
+                        <h5>Transparent System Logic</h5>
+                        <p>Compliance workflows and validation logic are versioned and auditable. Decisions affecting compliance status or economic outcomes remain traceable over time.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="principle-card">
+                        <div class="principle-icon"><i class="bi bi-lock"></i></div>
+                        <h5>Privacy and Security</h5>
+                        <p>Personal data is processed in accordance with GDPR — including data minimisation, role-based access controls, and secure storage practices.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-lg-8 mx-auto">
+                    <div class="info-card text-center">
+                        <h4>Data Sovereignty</h4>
+                        <p>Farmers and cooperatives retain visibility and functional access to their data. Participation in Plotra does not restrict future market relationships or create dependency on a single platform.</p>
+                        <ul class="check-list text-start mt-3">
+                            <li>Your data supports your access to market</li>
+                            <li>Your records remain usable across buyers</li>
+                            <li>Your participation does not lock you into a single system</li>
+                        </ul>
+                        <div class="mt-4">
+                            <a href="#" class="btn btn-plotra-outline">View full Data Governance Framework</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="section-padding">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-5">
+                    <div class="image-placeholder" style="min-height: 400px;">
+                        <span>[About Plotra Image - Add image here]</span>
+                    </div>
+                </div>
+                <div class="col-lg-6 offset-lg-1 mt-5 mt-lg-0">
+                    <h2 class="section-title">About Plotra</h2>
+                    <p class="text-muted mb-4">Plotra is the operational infrastructure behind Terraxis' compliance and traceability services.</p>
+                    <p class="text-muted mb-4">It is the system through which land is mapped, data is structured, verification is applied, and compliance outputs are generated.</p>
+                    <p class="text-muted mb-4">It is designed to absorb complexity — not eliminate it. Fragmented land, layered tenure, mixed production systems, and incomplete data are not treated as problems to be filtered out. They are structured into verifiable, auditable records that regulatory frameworks and buyers can rely on.</p>
+                    <p class="text-muted mb-4">Plotra is currently in active deployment through the Kenya pilot programme, working with sample cooperative societies and registered farmers.</p>
+                    
+                    <h4 class="mt-5 mb-3">Built on Open Standards</h4>
+                    <p class="text-muted">Plotra is designed in alignment with Digital Public Goods principles — focused on interoperability, transparency of system logic, and the avoidance of black-box dependency. The infrastructure is structured to remain legible and portable across systems.</p>
+                    <p class="text-muted">Within this structure, Terraxis develops commercial service layers that build on the underlying infrastructure — maintaining a clear distinction between shared data foundations and market-facing applications.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="container text-center">
+            <h2>Ready to get started?</h2>
+            <p>Join the Plotra network and build compliant, traceable supply chains.</p>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="dashboard/index.html" class="btn btn-light btn-lg px-5 py-3 fw-bold text-dark">Request a Quotation</a>
+                <a href="dashboard/index.html" class="btn btn-outline-light btn-lg px-5 py-3">Contact Us</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="Logo_for_coffee_202604042236.jpeg" alt="Plotra Logo" height="35" class="me-2">
+                        <span class="footer-brand">Plotra</span>
+                    </div>
+                    <p class="footer-tagline">Parcel-based infrastructure for EUDR compliance and supply chain traceability.</p>
+                    <p class="footer-tagline">Built by Terraxis SRL</p>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h6 class="footer-heading">Platform</h6>
+                    <a href="#how-it-works" class="footer-link">How It Works</a>
+                    <a href="#importers" class="footer-link">For Importers</a>
+                    <a href="#cooperatives" class="footer-link">Cooperatives</a>
+                    <a href="#governance" class="footer-link">Data Governance</a>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h6 class="footer-heading">Company</h6>
+                    <a href="#about" class="footer-link">About</a>
+                    <a href="#" class="footer-link">Contact</a>
+                    <a href="#" class="footer-link">Careers</a>
+                </div>
+                <div class="col-lg-3">
+                    <h6 class="footer-heading">Contact</h6>
+                    <p class="text-white-50 mb-1"><i class="bi bi-geo-alt me-2"></i>Europe</p>
+                    <p class="text-white-50 mb-1"><i class="bi bi-envelope me-2"></i>info@terraxis.eu</p>
+                    <p class="text-white-50"><i class="bi bi-globe me-2"></i>www.terraxis.eu</p>
+                </div>
+            </div>
+            <div class="footer-bottom text-center">
+                <p class="mb-0">&copy; 2026 Plotra Platform. All rights reserved. Terraxis SRL.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 100) {
+                navbar.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                navbar.style.backdropFilter = 'blur(10px)';
+            } else {
+                navbar.style.backgroundColor = 'white';
+                navbar.style.backdropFilter = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
