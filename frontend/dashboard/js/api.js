@@ -13,8 +13,11 @@ class PlotraAPI {
         // Connect to the backend API
         if (window.API_URL) return window.API_URL;
 
-        // External backend URL
-        return 'http://localhost:8000/api/v2';
+        // Use relative path when behind nginx proxy, or fallback to external
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:8000/api/v2';
+        }
+        return '/api/v2';
     }
     
     setToken(token) {

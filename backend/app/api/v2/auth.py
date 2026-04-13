@@ -552,7 +552,8 @@ async def forgot_password(
     await db.commit()
     
     # Send reset email
-    reset_link = f"http://localhost:8080/reset-password?token={reset_token}"
+    from app.core.config import settings
+    reset_link = f"{settings.app.frontend_url}/reset-password?token={reset_token}"
     subject = "Plotra Platform - Password Reset Request"
     text_content = f"""
     We received a request to reset your password for the Plotra Platform.

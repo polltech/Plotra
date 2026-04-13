@@ -3,6 +3,13 @@
  * Bootstrap-based dashboard with role-based access
  */
 
+const apiBaseUrl = window.API_URL || (function() {
+    const hostname = window.location.hostname;
+    return (hostname === 'localhost' || hostname === '127.0.0.1') 
+        ? 'http://localhost:8000/api/v2' 
+        : '/api/v2';
+})();
+
 class PlotraDashboard {
     constructor() {
         this.currentUser = null;
@@ -608,7 +615,7 @@ class PlotraDashboard {
             
             // Validate cooperative code with backend
             try {
-                const response = await fetch(`http://localhost:8000/api/v2/coop/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
+                const response = await fetch(`${apiBaseUrl}/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -655,7 +662,7 @@ class PlotraDashboard {
                 // Debounce search
                 searchTimeout = setTimeout(async () => {
                     try {
-                        const response = await fetch(`http://localhost:8000/api/v2/coop/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
+                        const response = await fetch(`${apiBaseUrl}/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json'

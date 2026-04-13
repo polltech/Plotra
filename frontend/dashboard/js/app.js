@@ -277,7 +277,14 @@ class PlotraDashboard {
         btn.textContent = 'Sending...';
         
         try {
-            const response = await fetch('http://localhost:8000/api/v2/auth/otp/send', {
+            const apiBaseUrl = window.API_URL || (function() {
+                const hostname = window.location.hostname;
+                return (hostname === 'localhost' || hostname === '127.0.0.1') 
+                    ? 'http://localhost:8000/api/v2' 
+                    : '/api/v2';
+            })();
+            
+            const response = await fetch(`${apiBaseUrl}/auth/otp/send`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -329,8 +336,15 @@ class PlotraDashboard {
         btn.disabled = true;
         btn.textContent = 'Verifying...';
         
+        const apiBaseUrl = window.API_URL || (function() {
+            const hostname = window.location.hostname;
+            return (hostname === 'localhost' || hostname === '127.0.0.1') 
+                ? 'http://localhost:8000/api/v2' 
+                : '/api/v2';
+        })();
+        
         try {
-            const response = await fetch('http://localhost:8000/api/v2/auth/otp/verify', {
+            const response = await fetch(`${apiBaseUrl}/auth/otp/verify`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -418,7 +432,7 @@ class PlotraDashboard {
         const fullPhone = countryCode + phone;
         
         try {
-            const response = await fetch('http://localhost:8000/api/v2/auth/otp/resend', {
+            const response = await fetch(`${apiBaseUrl}/auth/otp/resend`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -1031,7 +1045,7 @@ class PlotraDashboard {
             
             // Validate cooperative code with backend
             try {
-                const response = await fetch(`http://localhost:8000/api/v2/coop/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
+                const response = await fetch(`${apiBaseUrl}/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1078,7 +1092,7 @@ class PlotraDashboard {
                 // Debounce search
                 searchTimeout = setTimeout(async () => {
                     try {
-                        const response = await fetch(`http://localhost:8000/api/v2/coop/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
+                        const response = await fetch(`${apiBaseUrl}/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json'

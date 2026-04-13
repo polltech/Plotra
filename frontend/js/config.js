@@ -6,7 +6,12 @@
 const CONFIG = {
     // API Configuration
     api: {
-        baseUrl: window.API_BASE_URL || 'http://localhost:8000/api/v2',
+        baseUrl: window.API_BASE_URL || (function() {
+            const hostname = window.location.hostname;
+            return (hostname === 'localhost' || hostname === '127.0..1') 
+                ? 'http://localhost:8000/api/v2' 
+                : '/api/v2';
+        })(),
         timeout: 30000,
         retryAttempts: 3,
         retryDelay: 1000
