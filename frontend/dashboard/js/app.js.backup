@@ -72,9 +72,18 @@ class PlotraDashboard {
     }
     
     showLogin() {
-        document.body.classList.add('auth-active');
-        const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+        // Force remove any existing backdrops first
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('auth-active');
+        document.body.style.overflow = '';
+        
+        const modalEl = document.getElementById('loginModal');
+        const modal = new bootstrap.Modal(modalEl);
         modal.show();
+        
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            document.body.classList.remove('auth-active');
+        });
     }
 
     showLandingPage() {
@@ -104,7 +113,10 @@ class PlotraDashboard {
     }
 
     showRegisterModal() {
-        document.body.classList.add('auth-active');
+        // Force remove any existing backdrops first  
+        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+        document.body.classList.remove('auth-active');
+        document.body.style.overflow = '';
         
         // Blur any focused element to prevent aria-hidden conflict
         if (document.activeElement && document.activeElement !== document.body) {
@@ -124,9 +136,19 @@ class PlotraDashboard {
         registerEl.removeAttribute('aria-hidden');
         const modal = new bootstrap.Modal(registerEl);
         modal.show();
+        
+        registerEl.addEventListener('hidden.bs.modal', () => {
+            document.body.classList.remove('auth-active');
+        });
     }
     
     showLoginModal() {
+        // Clean up any leftover modals first
+        document.body.classList.remove('auth-active');
+        document.querySelectorAll('.modal.show').forEach(m => {
+            try { bootstrap.Modal.getInstance(m)?.hide(); } catch(e) {}
+        });
+        
         document.body.classList.add('auth-active');
         
         // Blur any focused element to prevent aria-hidden conflict
@@ -147,7 +169,295 @@ class PlotraDashboard {
         loginEl.removeAttribute('aria-hidden');
         const modal = new bootstrap.Modal(loginEl);
         modal.show();
+        
+        loginEl.addEventListener('hidden.bs.modal', () => {
+            document.body.classList.remove('auth-active');
+        });
     }
+
+    // =============================================================================
+    // Phone Verification Functions
+    // =============================================================================
+    selectedCountryCode = '+254';
+
+    selectRegCountryCode(code, country) {
+        document.getElementById('regSelectedCountryCode').textContent = code;
+        this.selectedCountryCode = code;
+        // Close dropdown by clicking elsewhere
+        document.body.click();
+    }
+    
+    loginCountryCode = '+254';
+    pendingLoginPhone = '';
+    userLat = null;
+    userLon = null;
+
+    showPhoneVerifyModal(phoneNumber = null) {
+        // Track which modal was open before so we can restore it after verification
+        this._previousModalEl = null;
+        document.querySelectorAll('.modal.show').forEach(m => {
+            if (m.id !== 'phoneVerifyModal') this._previousModalEl = m;
+            const instance = bootstrap.Modal.getInstance(m);
+            if (instance) { try { instance.hide(); } catch(e) {} }
+        });
+
+        document.body.classList.remove('auth-active');
+
+        const modalEl = document.getElementById('phoneVerifyModal');
+        modalEl.removeAttribute('aria-hidden');
+
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        modal.show();
+
+        // Use { once: true } so this never stacks across multiple calls
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            document.body.classList.remove('auth-active');
+            document.body.style.overflow = '';
+        }, { once: true });
+
+        // Reset to step 1
+        this.showPhoneVerifyStep1();
+
+        if (phoneNumber) {
+            document.getElementById('verifyPhoneNumber').value = phoneNumber;
+        }
+    }
+
+    showPhoneVerifyStep1() {
+        document.querySelectorAll('#phoneVerifyModal .step-content').forEach(s => s.classList.remove('active'));
+        document.getElementById('phoneVerifyStep1').classList.add('active');
+    }
+
+    showPhoneVerifyStep2() {
+        const phone = document.getElementById('verifyPhoneNumber').value.trim();
+        const countryCodeSelect = document.getElementById('verifyCountryCodeSelect');
+        const countryCode = countryCodeSelect ? countryCodeSelect.value : (document.getElementById('selectedCountryCode')?.textContent || '+254');
+        
+        if (!phone || phone.length < 9) {
+            this.showToast('Please enter a valid 9-digit phone number', 'error');
+            return;
+        }
+        
+        const fullPhone = countryCode + phone.replace(/^0/, '');
+        // Mask phone for display
+        const masked = fullPhone.slice(0, -4).replace(/./g, '*') + fullPhone.slice(-4);
+        document.getElementById('maskedPhone').textContent = masked;
+        
+        document.querySelectorAll('#phoneVerifyModal .step-content').forEach(s => s.classList.remove('active'));
+        document.getElementById('phoneVerifyStep2').classList.add('active');
+        
+        // Send OTP
+        this.sendOTP(fullPhone);
+    }
+
+    showPhoneVerifyStep3(onVerifiedCallback) {
+        document.querySelectorAll('#phoneVerifyModal .step-content').forEach(s => s.classList.remove('active'));
+        document.getElementById('phoneVerifyStep3').classList.add('active');
+        
+        // If there's a callback (for registration flow), execute it
+        if (onVerifiedCallback) {
+            setTimeout(onVerifiedCallback, 1500);
+        }
+    }
+
+    // Store for registration flow
+    pendingPhoneVerification = null;
+    verifiedRegistrationPhone = null;
+
+    proceedToRegistrationAfterVerify() {
+        // Move to registration step 2
+        document.getElementById('regStep1').classList.remove('active');
+        document.getElementById('regStep2').classList.add('active');
+    }
+
+    async sendOTP(phoneNumber) {
+        const btn = document.getElementById('btnSendOTP');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        
+        try {
+            const apiBaseUrl = window.API_URL || (function() {
+                const hostname = window.location.hostname;
+                return (hostname === 'localhost' || hostname === '127.0.0.1') 
+                    ? 'http://localhost:8000/api/v2' 
+                    : '/api/v2';
+            })();
+            
+            const response = await fetch(`${apiBaseUrl}/auth/otp/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `phone_number=${encodeURIComponent(phoneNumber)}`
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.showToast('Verification code sent!', 'success');
+                // Populate hidden phone field for the verify step
+                const phone = phoneNumber.slice(-9);
+                document.getElementById('verifyPhoneNumber').value = phone;
+            } else {
+                this.showToast(data.detail || 'Failed to send OTP', 'error');
+            }
+        } catch (error) {
+            console.error('Send OTP error:', error);
+            this.showToast('Failed to send verification code', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    async verifyOTP() {
+        const phoneInput = document.getElementById('verifyPhoneNumber');
+        const otpInput = document.getElementById('verifyOTP');
+        const countryCode = document.getElementById('selectedCountryCode')?.textContent || '+254';
+        
+        const phone = phoneInput.value.trim().replace(/^0/, '');
+        const otp = otpInput.value.trim();
+        
+        if (!phone || phone.length < 9) {
+            this.showToast('Invalid phone number', 'error');
+            return;
+        }
+        
+        if (!otp || otp.length !== 6) {
+            this.showToast('Please enter the 6-digit code', 'error');
+            return;
+        }
+        
+        const fullPhone = countryCode + phone;
+        
+        const btn = document.getElementById('btnVerifyOTP');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+        
+        const apiBaseUrl = window.API_URL || (function() {
+            const hostname = window.location.hostname;
+            return (hostname === 'localhost' || hostname === '127.0.0.1') 
+                ? 'http://localhost:8000/api/v2' 
+                : '/api/v2';
+        })();
+        
+        try {
+            const response = await fetch(`${apiBaseUrl}/auth/otp/verify`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `phone_number=${encodeURIComponent(fullPhone)}&otp=${encodeURIComponent(otp)}`
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Store verification info
+                localStorage.setItem('phone_verified', 'true');
+                localStorage.setItem('verified_phone', fullPhone);
+                localStorage.setItem('verification_token', data.verification_token);
+
+                this.verifiedRegistrationPhone = fullPhone;
+                document.getElementById('verifiedPhoneDisplay').textContent = fullPhone;
+
+                if (this.pendingPhoneVerification) {
+                    // Registration flow: close verify modal, then re-open register modal at step 2
+                    this.pendingPhoneVerification = null;
+                    this.showToast('Phone verified! Continuing registration...', 'success');
+
+                    const verifyModal = bootstrap.Modal.getInstance(document.getElementById('phoneVerifyModal'));
+                    if (verifyModal) verifyModal.hide();
+
+                    // Wait for phoneVerifyModal to fully close before opening registerModal
+                    setTimeout(() => {
+                        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+
+                        // Switch to step 2 inside register modal
+                        document.querySelectorAll('#registerModal .step-content').forEach(s => s.classList.remove('active'));
+                        document.getElementById('regStep2').classList.add('active');
+
+                        const registerEl = document.getElementById('registerModal');
+                        const registerModal = new bootstrap.Modal(registerEl, { backdrop: 'static', keyboard: false });
+                        registerModal.show();
+                    }, 400);
+                } else {
+                    // Standalone verification: show success step, then open login modal on Continue
+                    this.showPhoneVerifyStep3();
+                    this.showToast('Phone verified successfully!', 'success');
+
+                    // Wire the Continue button to open login modal after closing
+                    const continueBtn = document.querySelector('#phoneVerifyStep3 [data-bs-dismiss="modal"]');
+                    if (continueBtn) {
+                        continueBtn.addEventListener('click', () => {
+                            setTimeout(() => {
+                                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                                document.body.classList.remove('modal-open');
+                                document.body.style.overflow = '';
+                                document.body.style.paddingRight = '';
+                                this.showLoginModal();
+                            }, 350);
+                        }, { once: true });
+                    }
+                }
+            } else {
+                this.showToast(data.detail || 'Invalid or expired code', 'error');
+                otpInput.value = '';
+                otpInput.focus();
+            }
+        } catch (error) {
+            console.error('Verify OTP error:', error);
+            this.showToast('Failed to verify code', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+
+    async resendOTP() {
+        const phoneInput = document.getElementById('verifyPhoneNumber');
+        const phone = phoneInput.value.trim().replace(/^0/, '');
+        const countryCode = document.getElementById('selectedCountryCode')?.textContent || '+254';
+        
+        if (!phone || phone.length < 9) {
+            this.showToast('Invalid phone number', 'error');
+            return;
+        }
+        
+        const fullPhone = countryCode + phone;
+        
+        try {
+            const response = await fetch(`${apiBaseUrl}/auth/otp/resend`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `phone_number=${encodeURIComponent(fullPhone)}`
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                this.showToast('New code sent!', 'success');
+                document.getElementById('verifyOTP').value = '';
+                document.getElementById('verifyOTP').focus();
+            } else {
+                this.showToast(data.detail || 'Failed to resend OTP', 'error');
+            }
+        } catch (error) {
+            console.error('Resend OTP error:', error);
+            this.showToast('Failed to resend code', 'error');
+        }
+    }
+
+    // =============================================================================
+    // End Phone Verification Functions
+    // =============================================================================
     
     showForgotStep() {
         document.querySelectorAll('#loginModal .step-content').forEach(s => s.classList.remove('active'));
@@ -220,6 +530,26 @@ class PlotraDashboard {
         }
     }
     
+    forceHideModal(modalId) {
+        const modalEl = document.getElementById(modalId);
+        if (!modalEl) return;
+        
+        // Remove backdrop immediately
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(bp => bp.remove());
+        
+        // Force remove show class and hide modal
+        modalEl.classList.remove('show');
+        modalEl.style.display = 'none';
+        modalEl.setAttribute('aria-hidden', 'true');
+        modalEl.removeAttribute('aria-modal');
+        
+        // Remove body modal-open class
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
+    
     showApp() {
         console.log('Showing app...');
         document.body.classList.remove('auth-active');
@@ -257,7 +587,20 @@ class PlotraDashboard {
             
             if (roleBadge) roleBadge.textContent = this.formatRole(this.currentUser.role);
             if (userRoleDisplay) userRoleDisplay.textContent = this.formatRole(this.currentUser.role);
-            
+
+            // Update header brand title based on role
+            const headerBrandTitle = document.getElementById('headerBrandTitle');
+            if (headerBrandTitle) {
+                const r = (this.currentUser.role || '').toLowerCase();
+                if (r === 'plotra_admin' || r === 'kipawa_admin') {
+                    headerBrandTitle.textContent = 'Plotra Management';
+                } else if (r === 'farmer') {
+                    headerBrandTitle.textContent = 'Farmers Workplace';
+                } else {
+                    headerBrandTitle.textContent = 'Plotra Platform';
+                }
+            }
+
             // Show user profile in sidebar
             if (userProfile) {
                 userProfile.style.display = 'flex';
@@ -313,7 +656,8 @@ class PlotraDashboard {
             { id: 'parcels', icon: 'bi-boundary', label: 'My Parcels' },
             { id: 'deliveries', icon: 'bi-box-seam', label: 'Deliveries' },
             { id: 'documents', icon: 'bi-file-earmark-text', label: 'KYC Documents' },
-            { id: 'compliance', icon: 'bi-file-earmark-check', label: 'EUDR Compliance' }
+            { id: 'compliance', icon: 'bi-file-earmark-check', label: 'EUDR Compliance' },
+            { id: 'profile', icon: 'bi-person-circle', label: 'My Profile' }
         ];
         
         const coopAdminNav = [
@@ -347,7 +691,6 @@ class PlotraDashboard {
             { id: 'dashboard', icon: 'bi-speedometer2', label: 'Dashboard' },
             { id: 'cooperatives', icon: 'bi-building', label: 'Cooperatives' },
             { id: 'farmers', icon: 'bi-people', label: 'Farmers' },
-            { id: 'farms', icon: 'bi-geo-alt', label: 'Farms' },
             { id: 'wallet', icon: 'bi-wallet2', label: 'Wallet & Payments' },
             { id: 'users', icon: 'bi-people', label: 'Users' },
             { id: 'verification', icon: 'bi-check-circle', label: 'Verification EUDR' },
@@ -459,24 +802,39 @@ class PlotraDashboard {
     }
     
     setupEventListeners() {
+        // Update hamburger icon based on sidebar state
+        const updateHamburgerIcon = () => {
+            const btn = document.getElementById('navbarSidebarToggle');
+            if (!btn) return;
+            const icon = btn.querySelector('i');
+            if (!icon) return;
+            const sidebar = document.getElementById('sidebar');
+            const isOpen = window.innerWidth >= 1200
+                ? !document.body.classList.contains('sidebar-collapsed')
+                : sidebar && sidebar.classList.contains('show');
+            icon.className = isOpen ? 'bi bi-x' : 'bi bi-list';
+            icon.style.fontSize = '1.25rem';
+        };
+
         // Sidebar Toggle Functionality
         const toggleSidebar = () => {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.querySelector('.sidebar-overlay');
             const body = document.body;
-            
+
             if (sidebar) {
                 // Desktop: collapse/expand
                 if (window.innerWidth >= 1200) {
                     body.classList.toggle('sidebar-collapsed');
                     sidebar.classList.toggle('collapsed');
                     localStorage.setItem('sidebarCollapsed', body.classList.contains('sidebar-collapsed'));
-                } 
+                }
                 // Mobile: slide in/out
                 else {
                     sidebar.classList.toggle('show');
                     if (overlay) overlay.classList.toggle('show');
                 }
+                updateHamburgerIcon();
             }
         };
 
@@ -489,6 +847,8 @@ class PlotraDashboard {
                 if (sidebar) sidebar.classList.add('collapsed');
             }
         }
+        // Set correct icon on load
+        updateHamburgerIcon();
 
         // Delegate sidebar toggle to document to handle dynamically added buttons
         document.addEventListener('click', (e) => {
@@ -504,25 +864,13 @@ class PlotraDashboard {
         document.addEventListener('click', (e) => {
             const overlay = document.querySelector('.sidebar-overlay');
             const sidebar = document.getElementById('sidebar');
-            
-            if (overlay && overlay.classList.contains('show') && 
-                !sidebar.contains(e.target) && 
-                !e.target.closest('#navbarSidebarToggle')) {
-                sidebar.classList.remove('show');
-                overlay.classList.remove('show');
-            }
-        });
 
-        // Close sidebar when clicking overlay (mobile)
-        document.addEventListener('click', (e) => {
-            const overlay = document.querySelector('.sidebar-overlay');
-            const sidebar = document.getElementById('sidebar');
-            
-            if (overlay && overlay.classList.contains('show') && 
-                !sidebar.contains(e.target) && 
+            if (overlay && overlay.classList.contains('show') &&
+                !sidebar.contains(e.target) &&
                 !e.target.closest('#navbarSidebarToggle')) {
                 sidebar.classList.remove('show');
                 overlay.classList.remove('show');
+                updateHamburgerIcon();
             }
         });
 
@@ -548,17 +896,23 @@ class PlotraDashboard {
         }
 
         safeAddListener('btnNextLogin', 'click', () => {
-            const emailInput = document.getElementById('loginEmail');
-            const email = emailInput ? emailInput.value : '';
-            if (email && email.includes('@')) {
-                const displayEmail = document.getElementById('displayLoginEmail');
-                if (displayEmail) displayEmail.textContent = email;
+            const phoneInput = document.getElementById('loginPhone');
+            const phone = phoneInput ? phoneInput.value.trim() : '';
+            const countryCodeSelect = document.getElementById('loginCountryCodeSelect');
+            const countryCode = countryCodeSelect ? countryCodeSelect.value : (this.loginCountryCode || '+254');
+            
+            if (phone && phone.length === 9) {
+                const fullPhone = countryCode + phone;
+                const displayPhone = document.getElementById('displayLoginPhone');
+                if (displayPhone) displayPhone.textContent = fullPhone;
+                // Store for login
+                this.pendingLoginPhone = fullPhone;
                 const step1 = document.getElementById('loginStep1');
                 const step2 = document.getElementById('loginStep2');
                 if (step1) step1.classList.remove('active');
                 if (step2) step2.classList.add('active');
             } else {
-                this.showToast('Please enter a valid email', 'error');
+                this.showToast('Please enter a valid phone number', 'error');
             }
         });
 
@@ -570,18 +924,101 @@ class PlotraDashboard {
         });
 
         // Registration form navigation
-        safeAddListener('btnNextReg1', 'click', () => {
+        safeAddListener('btnNextReg1', 'click', async () => {
             const email = document.getElementById('regEmail').value;
             const firstName = document.getElementById('regFirstName').value;
             const lastName = document.getElementById('regLastName').value;
+            const regPhone = document.getElementById('regPhone').value.trim();
+            const countryCodeSelect = document.getElementById('regCountryCodeSelect');
+            const countryCode = countryCodeSelect ? countryCodeSelect.value : (this.selectedCountryCode || '+254');
             
-            if (email && email.includes('@') && firstName && lastName) {
-                document.getElementById('regStep1').classList.remove('active');
-                document.getElementById('regStep2').classList.add('active');
-            } else {
-                this.showToast('Please fill in all personal details', 'error');
+            // Validate phone number
+            if (!regPhone || regPhone.length < 9) {
+                this.showToast('Please enter a valid 9-digit phone number', 'error');
+                return;
             }
+            
+            if (!email || !email.includes('@') || !firstName || !lastName) {
+                this.showToast('Please fill in all personal details', 'error');
+                return;
+            }
+
+            // Check for duplicates
+            const emailInput = document.getElementById('regEmail');
+            const phoneInput = document.getElementById('regPhone');
+            const firstNameInput = document.getElementById('regFirstName');
+            const lastNameInput = document.getElementById('regLastName');
+            
+            const hasEmailDuplicate = await this.checkFieldDuplicate('email', email, 'regEmail');
+            if (hasEmailDuplicate) return;
+            
+            const fullPhone = countryCode + regPhone.replace(/^0/, '');
+            const hasPhoneDuplicate = await this.checkFieldDuplicate('phone', fullPhone, 'regPhone');
+            if (hasPhoneDuplicate) return;
+            
+            const hasNameDuplicate = await this.checkFieldDuplicate('name', '', 'regFirstName');
+            if (hasNameDuplicate) return;
+            
+            // Show phone verification modal
+            this.pendingPhoneVerification = fullPhone;
+            this.showPhoneVerifyModal(regPhone);
         });
+
+        // Add duplicate check listeners for registration fields
+        const regEmailInput = document.getElementById('regEmail');
+        if (regEmailInput) {
+            regEmailInput.addEventListener('blur', async function() {
+                const appInstance = window.app;
+                if (!appInstance) return;
+                if (this.value && this.value.includes('@')) {
+                    await appInstance.checkFieldDuplicate('email', this.value, 'regEmail');
+                }
+            });
+            regEmailInput.addEventListener('input', function() {
+                const appInstance = window.app;
+                if (appInstance) appInstance.clearFieldDuplicateError(this, 'email');
+            });
+        }
+
+        const regPhoneInput = document.getElementById('regPhone');
+        if (regPhoneInput) {
+            regPhoneInput.addEventListener('blur', async function() {
+                const appInstance = window.app;
+                if (!appInstance) return;
+                const countryCodeSelect = document.getElementById('regCountryCodeSelect');
+                const countryCode = countryCodeSelect ? countryCodeSelect.value : (appInstance.selectedCountryCode || '+254');
+                if (this.value && this.value.length >= 9) {
+                    const fullPhone = countryCode + this.value.replace(/^0/, '');
+                    await appInstance.checkFieldDuplicate('phone', fullPhone, 'regPhone');
+                }
+            });
+            regPhoneInput.addEventListener('input', function() {
+                const appInstance = window.app;
+                if (appInstance) appInstance.clearFieldDuplicateError(this, 'phone');
+            });
+        }
+
+        const regFirstNameInput = document.getElementById('regFirstName');
+        const regLastNameInput = document.getElementById('regLastName');
+        if (regFirstNameInput && regLastNameInput) {
+            const checkNameDuplicate = async function() {
+                const appInstance = window.app;
+                if (!appInstance) return;
+                if (regFirstNameInput.value && regLastNameInput.value) {
+                    await appInstance.checkFieldDuplicate('name', '', 'regFirstName');
+                }
+            };
+            regFirstNameInput.addEventListener('blur', checkNameDuplicate);
+            regLastNameInput.addEventListener('blur', checkNameDuplicate);
+            regFirstNameInput.addEventListener('input', function() {
+                const appInstance = window.app;
+                if (appInstance) appInstance.clearFieldDuplicateError(this, 'name');
+            });
+            regLastNameInput.addEventListener('input', function() {
+                const appInstance = window.app;
+                if (appInstance) appInstance.clearFieldDuplicateError(this, 'name');
+            });
+        }
 
         document.querySelectorAll('.btnBackReg1').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -608,7 +1045,7 @@ class PlotraDashboard {
             
             // Validate cooperative code with backend
             try {
-                const response = await fetch(`http://localhost:8000/api/v2/coop/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
+                const response = await fetch(`${apiBaseUrl}/coop/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -655,7 +1092,7 @@ class PlotraDashboard {
                 // Debounce search
                 searchTimeout = setTimeout(async () => {
                     try {
-                        const response = await fetch(`http://localhost:8000/api/v2/coop/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
+                        const response = await fetch(`${apiBaseUrl}/coop/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -708,16 +1145,41 @@ class PlotraDashboard {
             });
         });
 
-        safeAddListener('btnNextReg3', 'click', () => {
+        safeAddListener('btnNextReg3', 'click', async () => {
             // Step 3 is now Gender & ID - go to Step 4 (Password)
             const gender = document.getElementById('regGender').value;
-            if (gender) {
-                document.getElementById('regStep3').classList.remove('active');
-                document.getElementById('regStep4').classList.add('active');
-            } else {
+            
+            if (!gender) {
                 this.showToast('Please select your gender', 'error');
+                return;
             }
+
+            // Check ID number duplicate
+            const idNumberInput = document.getElementById('regIdNumber');
+            if (idNumberInput && idNumberInput.value.trim()) {
+                const hasIdDuplicate = await this.checkFieldDuplicate('idNumber', idNumberInput.value.trim(), 'regIdNumber');
+                if (hasIdDuplicate) return;
+            }
+            
+            document.getElementById('regStep3').classList.remove('active');
+            document.getElementById('regStep4').classList.add('active');
         });
+
+        // Add duplicate check for ID number
+        const regIdNumberInput = document.getElementById('regIdNumber');
+        if (regIdNumberInput) {
+            regIdNumberInput.addEventListener('blur', async function() {
+                const appInstance = window.app;
+                if (!appInstance) return;
+                if (this.value && this.value.trim()) {
+                    await appInstance.checkFieldDuplicate('idNumber', this.value.trim(), 'regIdNumber');
+                }
+            });
+            regIdNumberInput.addEventListener('input', function() {
+                const appInstance = window.app;
+                if (appInstance) appInstance.clearFieldDuplicateError(this, 'idNumber');
+            });
+        }
 
         document.querySelectorAll('.btnBackReg3').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -791,6 +1253,67 @@ class PlotraDashboard {
                 e.preventDefault();
                 this.handleCreateCooperative();
             });
+
+            // Add duplicate check listeners for cooperative form
+            const coopRegNumberInput = document.getElementById('coopRegNumber');
+            if (coopRegNumberInput) {
+                coopRegNumberInput.addEventListener('blur', async function() {
+                    const appInstance = window.app;
+                    if (!appInstance) return;
+                    if (this.value && this.value.trim()) {
+                        await appInstance.checkCoopFieldDuplicate('registrationNumber', this.value.trim(), 'coopRegNumber');
+                    }
+                });
+                coopRegNumberInput.addEventListener('input', function() {
+                    const appInstance = window.app;
+                    if (appInstance) appInstance.clearFieldDuplicateError(this, 'registrationNumber');
+                });
+            }
+
+            const coopEmailInput = document.getElementById('coopEmail');
+            if (coopEmailInput) {
+                coopEmailInput.addEventListener('blur', async function() {
+                    const appInstance = window.app;
+                    if (!appInstance) return;
+                    if (this.value && this.value.includes('@')) {
+                        await appInstance.checkFieldDuplicate('email', this.value, 'coopEmail');
+                    }
+                });
+                coopEmailInput.addEventListener('input', function() {
+                    const appInstance = window.app;
+                    if (appInstance) appInstance.clearFieldDuplicateError(this, 'email');
+                });
+            }
+
+            const coopAdminEmailInput = document.getElementById('coopAdminEmail');
+            if (coopAdminEmailInput) {
+                coopAdminEmailInput.addEventListener('blur', async function() {
+                    const appInstance = window.app;
+                    if (!appInstance) return;
+                    if (this.value && this.value.includes('@')) {
+                        await appInstance.checkFieldDuplicate('email', this.value, 'coopAdminEmail');
+                    }
+                });
+                coopAdminEmailInput.addEventListener('input', function() {
+                    const appInstance = window.app;
+                    if (appInstance) appInstance.clearFieldDuplicateError(this, 'email');
+                });
+            }
+
+            const coopPhoneInput = document.getElementById('coopPhone');
+            if (coopPhoneInput) {
+                coopPhoneInput.addEventListener('blur', async function() {
+                    const appInstance = window.app;
+                    if (!appInstance) return;
+                    if (this.value && this.value.trim()) {
+                        await appInstance.checkFieldDuplicate('phone', this.value, 'coopPhone');
+                    }
+                });
+                coopPhoneInput.addEventListener('input', function() {
+                    const appInstance = window.app;
+                    if (appInstance) appInstance.clearFieldDuplicateError(this, 'phone');
+                });
+            }
         }
 
         const addDeliveryForm = document.getElementById('addDeliveryForm');
@@ -839,6 +1362,21 @@ class PlotraDashboard {
                 e.preventDefault();
                 this.handleCreateFarm();
             });
+            
+            // Add Farm Modal event listeners for dynamic fields
+            const addFarmModal = document.getElementById('addFarmModal');
+            if (addFarmModal) {
+                addFarmModal.addEventListener('shown.bs.modal', () => {
+                    this.initFarmMap();
+                    this.initGPSCapture();
+                    this.setupEUDRDynamicFields();
+                    this.generateParcelId();
+                });
+                
+                addFarmModal.addEventListener('hidden.bs.modal', () => {
+                    this.clearFarmForm();
+                });
+            }
         }
     }
     
@@ -860,17 +1398,27 @@ class PlotraDashboard {
     }
     
     async handleLogin() {
-        const email = document.getElementById('loginEmail').value;
+        // Use phone number stored from step 1
+        const phone = this.pendingLoginPhone || '';
         const pass = document.getElementById('loginPassword').value;
+        
+        if (!phone) {
+            this.showToast('Please enter your phone number', 'error');
+            return;
+        }
+        
+        if (!pass) {
+            this.showToast('Please enter your password', 'error');
+            return;
+        }
         
         try {
             this.showToast('Logging in...', 'info');
-            await api.login(email, pass);
+            // Login with phone as username
+            await api.login(phone, pass);
             
-            // Close login modal
-            const loginEl = document.getElementById('loginModal');
-            const loginModal = bootstrap.Modal.getInstance(loginEl);
-            if (loginModal) loginModal.hide();
+            // Close login modal immediately without animation
+            this.forceHideModal('loginModal');
             
             this.showApp();
             this.showToast('Login successful!', 'success');
@@ -893,7 +1441,9 @@ class PlotraDashboard {
         const gender = document.getElementById('regGender')?.value;
         const idType = document.getElementById('regIdType')?.value;
         const idNumber = document.getElementById('regIdNumber')?.value;
-        const phoneNumber = document.getElementById('regPhone')?.value;
+        // Get phone with country code - use verified phone if available
+        let phoneNumber = this.verifiedRegistrationPhone || this.selectedCountryCode + (document.getElementById('regPhone')?.value || '').replace(/^0/, '');
+        if (phoneNumber === this.selectedCountryCode) phoneNumber = ''; // Clear if only country code
         // Payment info - use defaults if fields not present (step 4 was removed)
         const payoutMethodEl = document.getElementById('regPayoutMethod');
         const payoutRecipientEl = document.getElementById('regPayoutRecipient');
@@ -917,6 +1467,14 @@ class PlotraDashboard {
         
         if (!email || !firstName || !lastName || !role) {
             this.showToast('Please fill in all required fields', 'error');
+            return;
+        }
+        
+        // Check phone verification
+        const phoneVerified = localStorage.getItem('phone_verified') === 'true';
+        const verifiedPhone = localStorage.getItem('verified_phone');
+        if (!phoneVerified || !verifiedPhone) {
+            this.showToast('Please verify your phone number first', 'error');
             return;
         }
         
@@ -949,23 +1507,18 @@ class PlotraDashboard {
             console.log('Registration request sent successfully');
             this.showToast('Registration successful! Logging you in...', 'success');
             
-            // Close register modal
-            const registerEl = document.getElementById('registerModal');
-            const registerModal = bootstrap.Modal.getInstance(registerEl);
-            if (registerModal) registerModal.hide();
+            // Close register modal immediately without animation
+            this.forceHideModal('registerModal');
             
-            // Clear form
+            // Clear form and duplicate errors
             document.getElementById('registerForm').reset();
+            this.clearAllDuplicateErrors();
             
-            // Auto-login after registration
-            await api.login(email, password);
+            // Auto-login after registration using verified phone number
+            const loginPhone = this.verifiedRegistrationPhone || this.selectedCountryCode + (document.getElementById('regPhone')?.value || '').replace(/^0/, '');
+            await api.login(loginPhone, password);
             this.showApp();
             this.showToast('Welcome! Please complete your profile information.', 'success');
-            
-            // Redirect to profile page after registration to complete profile
-            setTimeout(() => {
-                this.loadPage('profile');
-            }, 1000);
         } catch (error) {
             console.error('Registration/Login Error:', error);
             this.showToast(error.message || 'Registration failed', 'error');
@@ -975,6 +1528,202 @@ class PlotraDashboard {
     logout() {
         api.logout();
         location.reload();
+    }
+
+    async checkFieldDuplicate(fieldType, value, inputElement) {
+        if (!value || value.trim() === '') return false;
+        
+        const input = inputElement ? document.getElementById(inputElement) : null;
+        let endpoint = '';
+        let paramName = '';
+        
+        switch (fieldType) {
+            case 'email':
+                endpoint = '/auth/check/email';
+                paramName = 'email';
+                break;
+            case 'phone':
+                endpoint = '/auth/check/phone';
+                paramName = 'phone';
+                break;
+            case 'idNumber':
+                endpoint = '/auth/check/id-number';
+                paramName = 'id_number';
+                break;
+            case 'name':
+                const firstNameEl = document.getElementById('regFirstName');
+                const lastNameEl = document.getElementById('regLastName');
+                if (firstNameEl && lastNameEl) {
+                    endpoint = '/auth/check/name';
+                    paramName = null;
+                }
+                break;
+            default:
+                return false;
+        }
+        
+        if (!endpoint) return false;
+        
+        let url = '';
+        if (fieldType === 'name') {
+            const firstName = document.getElementById('regFirstName')?.value || '';
+            const lastName = document.getElementById('regLastName')?.value || '';
+            url = `${endpoint}?first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}`;
+        } else {
+            url = `${endpoint}?${paramName}=${encodeURIComponent(value)}`;
+        }
+        
+        try {
+            const response = await fetch(api.baseUrl + url, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.exists) {
+                    this.showFieldDuplicateError(input, fieldType);
+                    return true;
+                } else {
+                    this.clearFieldDuplicateError(input, fieldType);
+                }
+            }
+        } catch (e) {
+            console.error('Error checking duplicate:', e);
+        }
+        return false;
+    }
+    
+    showFieldDuplicateError(inputElement, fieldType) {
+        if (!inputElement) return;
+        
+        inputElement.classList.add('duplicate-error');
+        
+        let errorId = `error-${inputElement.id}`;
+        let errorEl = document.getElementById(errorId);
+        
+        if (!errorEl) {
+            errorEl = document.createElement('div');
+            errorEl.id = errorId;
+            errorEl.className = 'duplicate-error-message';
+            inputElement.parentNode.appendChild(errorEl);
+        }
+        
+        let message = '';
+        switch (fieldType) {
+            case 'email': message = 'This email is already registered'; break;
+            case 'phone': message = 'This phone number is already registered'; break;
+            case 'idNumber': message = 'This ID number is already registered'; break;
+            case 'name': message = 'A user with this name already exists'; break;
+        }
+        
+        errorEl.textContent = message;
+        errorEl.classList.add('show');
+    }
+    
+    clearFieldDuplicateError(inputElement, fieldType) {
+        if (!inputElement) return;
+        
+        inputElement.classList.remove('duplicate-error');
+        
+        let errorId = `error-${inputElement.id}`;
+        let errorEl = document.getElementById(errorId);
+        if (errorEl) {
+            errorEl.classList.remove('show');
+        }
+    }
+    
+    clearAllDuplicateErrors() {
+        document.querySelectorAll('.auth-modal .duplicate-error').forEach(el => {
+            el.classList.remove('duplicate-error');
+        });
+        document.querySelectorAll('.auth-modal .duplicate-error-message').forEach(el => {
+            el.classList.remove('show');
+        });
+        // Also clear in addCooperativeModal
+        document.querySelectorAll('#addCooperativeModal .duplicate-error').forEach(el => {
+            el.classList.remove('duplicate-error');
+        });
+        document.querySelectorAll('#addCooperativeModal .duplicate-error-message').forEach(el => {
+            el.classList.remove('show');
+        });
+    }
+
+    async checkCoopFieldDuplicate(fieldType, value, inputElement) {
+        if (!value || value.trim() === '') return false;
+        
+        const input = inputElement ? document.getElementById(inputElement) : null;
+        let endpoint = '';
+        let paramName = '';
+        
+        switch (fieldType) {
+            case 'registrationNumber':
+                endpoint = 'auth/check/coop-registration-number';
+                paramName = 'registration_number';
+                break;
+            default:
+                return false;
+        }
+        
+        if (!endpoint) return false;
+        
+        const url = `${endpoint}?${paramName}=${encodeURIComponent(value)}`;
+        
+        try {
+            const response = await fetch(api.baseUrl + url, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.exists) {
+                    this.showCoopFieldDuplicateError(input, fieldType);
+                    return true;
+                } else {
+                    this.clearCoopFieldDuplicateError(input, fieldType);
+                }
+            }
+        } catch (e) {
+            console.error('Error checking duplicate:', e);
+        }
+        return false;
+    }
+    
+    showCoopFieldDuplicateError(inputElement, fieldType) {
+        if (!inputElement) return;
+        
+        inputElement.classList.add('duplicate-error');
+        
+        let errorId = `error-${inputElement.id}`;
+        let errorEl = document.getElementById(errorId);
+        
+        if (!errorEl) {
+            errorEl = document.createElement('div');
+            errorEl.id = errorId;
+            errorEl.className = 'duplicate-error-message';
+            inputElement.parentNode.appendChild(errorEl);
+        }
+        
+        let message = '';
+        switch (fieldType) {
+            case 'registrationNumber': message = 'This registration number already exists'; break;
+        }
+        
+        errorEl.textContent = message;
+        errorEl.classList.add('show');
+    }
+    
+    clearCoopFieldDuplicateError(inputElement, fieldType) {
+        if (!inputElement) return;
+        
+        inputElement.classList.remove('duplicate-error');
+        
+        let errorId = `error-${inputElement.id}`;
+        let errorEl = document.getElementById(errorId);
+        if (errorEl) {
+            errorEl.classList.remove('show');
+        }
     }
     
     // Check if user can access a page based on their role
@@ -1050,18 +1799,30 @@ class PlotraDashboard {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.querySelector('.sidebar-overlay');
         const body = document.body;
-        
+
         if (sidebar) {
             // Desktop: collapse/expand
             if (window.innerWidth >= 1200) {
                 body.classList.toggle('sidebar-collapsed');
                 sidebar.classList.toggle('collapsed');
                 localStorage.setItem('sidebarCollapsed', body.classList.contains('sidebar-collapsed'));
-            } 
+            }
             // Mobile: slide in/out
             else {
                 sidebar.classList.toggle('show');
                 if (overlay) overlay.classList.toggle('show');
+            }
+            // Update hamburger icon
+            const btn = document.getElementById('navbarSidebarToggle');
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    const isOpen = window.innerWidth >= 1200
+                        ? !body.classList.contains('sidebar-collapsed')
+                        : sidebar.classList.contains('show');
+                    icon.className = isOpen ? 'bi bi-x' : 'bi bi-list';
+                    icon.style.fontSize = '1.25rem';
+                }
             }
         }
     }
@@ -1084,6 +1845,11 @@ class PlotraDashboard {
             sidebar.classList.remove('show');
             const overlay = document.querySelector('.sidebar-overlay');
             if (overlay) overlay.classList.remove('show');
+            const btn = document.getElementById('navbarSidebarToggle');
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) { icon.className = 'bi bi-list'; icon.style.fontSize = '1.25rem'; }
+            }
         }
         
         this.loadPage(page);
@@ -1118,7 +1884,7 @@ class PlotraDashboard {
                     break;
                 case 'farms':
                     if (title) title.textContent = 'Farms Management';
-                    await this.loadFarms(content);
+                    await this.loadFarmsPage();
                     break;
                 case 'wallet':
                     if (title) title.textContent = 'Wallet & Payments';
@@ -1213,79 +1979,88 @@ class PlotraDashboard {
             const overview = await api.getComplianceOverview() || {};
             console.log('Overview received:', overview);
             
+            console.log('Fetching compliance chart data...');
+            let chartData = {};
+            try {
+                chartData = await api.getComplianceOverviewChart() || {};
+                console.log('Chart data received:', chartData);
+            } catch (chartError) {
+                console.warn('Chart data fetch failed, using defaults:', chartError.message);
+            }
+            
             content.innerHTML = `
-                <div class="row">
-                    <div class="col-md-12 col-lg-12">
-                        <div class="row row-cols-1">
-                            <div class="overflow-hidden d-slider1 ">
-                                <ul class="p-0 m-0 mb-2 swiper-wrapper list-inline">
-                                    <li class="swiper-slide card card-slide" data-aos="fade-up" data-aos-delay="700">
-                                        <div class="card-body">
-                                            <div class="progress-widget">
-                                                <div id="circle-progress-01" class="text-center circle-progress-01 circle-progress circle-progress-primary" data-min-value="0" data-max-value="100" data-value="80" data-type="percent">
-                                                    <svg class="card-slie-arrow icon-24" width="24" viewBox="0 0 24 24">
-                                                        <path fill="currentColor" d="M5,17.59L15.59,7H9V5H19V15H17V8.41L6.41,19L5,17.59Z" />
-                                                    </svg>
-                                                </div>
-                                                <div class="progress-detail">
-                                                    <p class="mb-2 text-muted small">Cooperatives</p>
-                                                    <h4 class="counter">${stats.total_cooperatives || 0}</h4>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li class="swiper-slide card card-slide" data-aos="fade-up" data-aos-delay="800">
-                                        <div class="card-body">
-                                            <div class="progress-widget">
-                                                <div id="circle-progress-02" class="text-center circle-progress-01 circle-progress circle-progress-info" data-min-value="0" data-max-value="100" data-value="70" data-type="percent">
-                                                    <svg class="card-slie-arrow icon-24" width="24" viewBox="0 0 24 24">
-                                                        <path fill="currentColor" d="M19,6.41L17.59,5L7,15.59V9H5V19H15V17H8.41L19,6.41Z" />
-                                                    </svg>
-                                                </div>
-                                                <div class="progress-detail">
-                                                    <p class="mb-2 text-muted small">Total Farms</p>
-                                                    <h4 class="counter">${stats.total_farms || 0}</h4>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li class="swiper-slide card card-slide" data-aos="fade-up" data-aos-delay="900">
-                                        <div class="card-body">
-                                            <div class="progress-widget">
-                                                <div id="circle-progress-03" class="text-center circle-progress-01 circle-progress circle-progress-primary" data-min-value="0" data-max-value="100" data-value="60" data-type="percent">
-                                                    <svg class="card-slie-arrow icon-24" width="24" viewBox="0 0 24 24">
-                                                        <path fill="currentColor" d="M5,17.59L15.59,7H9V5H19V15H17V8.41L6.41,19L5,17.59Z" />
-                                                    </svg>
-                                                </div>
-                                                <div class="progress-detail">
-                                                    <p class="mb-2 text-muted small">Farmers</p>
-                                                    <h4 class="counter">${stats.total_farmers || 0}</h4>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li class="swiper-slide card card-slide" data-aos="fade-up" data-aos-delay="1000">
-                                        <div class="card-body">
-                                            <div class="progress-widget">
-                                                <div id="circle-progress-04" class="text-center circle-progress-01 circle-progress circle-progress-info" data-min-value="0" data-max-value="100" data-value="40" data-type="percent">
-                                                    <svg class="card-slie-arrow icon-24" width="24" viewBox="0 0 24 24">
-                                                        <path fill="currentColor" d="M19,6.41L17.59,5L7,15.59V9H5V19H15V17H8.41L19,6.41Z" />
-                                                    </svg>
-                                                </div>
-                                                <div class="progress-detail">
-                                                    <p class="mb-2 text-muted small">Compliance</p>
-                                                    <h4 class="counter">${stats.compliance_rate || 0}%</h4>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
+                <div class="row g-0 mt-0 admin-dashboard">
+                    <div class="col-6 col-xl-3">
+                        <div class="card card-slide" data-aos="fade-up" data-aos-delay="700" onclick="app.navigateTo('cooperatives')" style="cursor: pointer;">
+                            <div class="card-body p-1 m-0">
+                                <div class="progress-widget">
+                                    <div id="circle-progress-01" class="text-center circle-progress-01 circle-progress circle-progress-primary" data-min-value="0" data-max-value="100" data-value="80" data-type="percent">
+                                        <svg class="card-slie-arrow icon-16" width="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M5,17.59L15.59,7H9V5H19V15H17V8.41L6.41,19L5,17.59Z" />
+                                        </svg>
+                                    </div>
+                                    <div class="progress-detail">
+                                        <p class="mb-0 text-muted small">Cooperatives</p>
+                                        <h4 class="counter">${stats.total_cooperatives || 0}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="card card-slide" data-aos="fade-up" data-aos-delay="800" onclick="app.navigateTo('farms')" style="cursor: pointer;">
+                            <div class="card-body p-1 m-0">
+                                <div class="progress-widget">
+                                    <div id="circle-progress-02" class="text-center circle-progress-01 circle-progress circle-progress-info" data-min-value="0" data-max-value="100" data-value="70" data-type="percent">
+                                        <svg class="card-slie-arrow icon-16" width="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M19,6.41L17.59,5L7,15.59V9H5V19H15V17H8.41L19,6.41Z" />
+                                        </svg>
+                                    </div>
+                                    <div class="progress-detail">
+                                        <p class="mb-0 text-muted small">Total Farms</p>
+                                        <h4 class="counter">${stats.total_farms || 0}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="card card-slide" data-aos="fade-up" data-aos-delay="900" onclick="app.navigateTo('farmers')" style="cursor: pointer;">
+                            <div class="card-body p-1 m-0">
+                                <div class="progress-widget">
+                                    <div id="circle-progress-03" class="text-center circle-progress-01 circle-progress circle-progress-primary" data-min-value="0" data-max-value="100" data-value="60" data-type="percent">
+                                        <svg class="card-slie-arrow icon-16" width="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M5,17.59L15.59,7H9V5H19V15H17V8.41L6.41,19L5,17.59Z" />
+                                        </svg>
+                                    </div>
+                                    <div class="progress-detail">
+                                        <p class="mb-0 text-muted small">Farmers</p>
+                                        <h4 class="counter">${stats.total_farmers || 0}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="card card-slide" data-aos="fade-up" data-aos-delay="1000" onclick="app.navigateTo('compliance')" style="cursor: pointer;">
+                            <div class="card-body p-1 m-0">
+                                <div class="progress-widget">
+                                    <div id="circle-progress-04" class="text-center circle-progress-01 circle-progress circle-progress-info" data-min-value="0" data-max-value="100" data-value="40" data-type="percent">
+                                        <svg class="card-slie-arrow icon-16" width="16" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M19,6.41L17.59,5L7,15.59V9H5V19H15V17H8.41L19,6.41Z" />
+                                        </svg>
+                                    </div>
+                                    <div class="progress-detail">
+                                        <p class="mb-0 text-muted small">Compliance</p>
+                                        <h4 class="counter">${stats.compliance_rate || 0}%</h4>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row g-4">
+                <div class="row g-0 mt-0">
                     <div class="col-lg-8">
                         <div class="card h-100" data-aos="fade-up" data-aos-delay="1100">
                             <div class="card-header d-flex justify-content-between flex-wrap">
@@ -1359,14 +2134,13 @@ class PlotraDashboard {
                                         <thead>
                                             <tr>
                                                 <th class="small">COOPERATIVE</th>
-                                                <th class="small">FARMS</th>
-                                                <th class="small">COMPLIANCE</th>
-                                                <th class="small">PROGRESS</th>
-                                                <th class="text-end small">ACTION</th>
+                                                <th class="small">COOPERATIVE NAME</th>
+                                                <th class="small">USERS</th>
+                                                <th class="small">VIEW</th>
                                             </tr>
                                         </thead>
                                         <tbody id="coop-performance-list">
-                                            <tr><td colspan="5" class="text-center py-4 text-muted">No data available</td></tr>
+                                            <tr><td colspan="4" class="text-center py-4 text-muted">No data available</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1394,10 +2168,6 @@ class PlotraDashboard {
                                     <button class="btn btn-soft-warning w-100" onclick="app.loadPage('sustainability')">
                                         <i class="bi bi-leaf me-2"></i> Sustainability Audit
                                     </button>
-                                    <hr>
-                                    <button class="btn btn-soft-danger w-100" onclick="app.confirmClearAllData()">
-                                        <i class="bi bi-trash me-2"></i> Reset Platform Data
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1408,7 +2178,7 @@ class PlotraDashboard {
             // Re-initialize UI components synchronously
             console.log('Initializing charts and sub-lists...');
             try {
-                this.initAdminDashboardCharts(overview);
+                this.initAdminDashboardCharts(overview, chartData);
             } catch (chartError) {
                 console.error('Error initializing charts:', chartError);
             }
@@ -1463,7 +2233,7 @@ class PlotraDashboard {
         `;
     }
 
-    initAdminDashboardCharts(overview) {
+    initAdminDashboardCharts(overview, chartData) {
         const chartContainer = document.querySelector("#compliance-chart");
         if (!chartContainer) {
             console.log('Chart container not found');
@@ -1472,23 +2242,37 @@ class PlotraDashboard {
         console.log('Chart container found, checking ApexCharts...');
         console.log('ApexCharts defined:', typeof ApexCharts);
         
+        // Use real data from API if available, fallback to mock data
+        const compliantCount = chartData?.values?.[0] || overview?.compliance_breakdown?.compliant || 0;
+        const pendingCount = chartData?.values?.[1] || overview?.compliance_breakdown?.under_review || 0;
+        
         const options = {
             series: [{
                 name: 'Compliant',
-                data: overview?.compliant_trend || [30, 40, 35, 50, 49, 60, 70, 91, 125]
+                data: [compliantCount]  // Single value for bar/pie chart
             }, {
                 name: 'Pending',
-                data: overview?.pending_trend || [20, 30, 25, 30, 29, 40, 40, 50, 60]
+                data: [pendingCount]  // Single value for bar/pie chart
             }],
             chart: {
                 height: 245,
-                type: 'area',
+                type: 'bar',
                 toolbar: { show: false },
                 sparkline: { enabled: false }
             },
-            dataLabels: { enabled: false },
-            stroke: { curve: 'smooth', width: 3 },
-            colors: ["#6f4e37", "#a67b5b"],
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: '55%',
+                    borderRadius: 4,
+                    dataLabels: {
+                        position: 'top'
+                    }
+                }
+            },
+            dataLabels: { enabled: true },
+            stroke: { show: true, curve: 'smooth', width: 2 },
+            colors: ["#198754", "#0dcaf0"],
             fill: {
                 type: 'gradient',
                 gradient: {
@@ -1499,7 +2283,7 @@ class PlotraDashboard {
                 }
             },
             xaxis: {
-                categories: overview?.categories || ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"],
+                categories: ["Compliant", "Pending"],
                 axisBorder: { show: false },
                 axisTicks: { show: false },
                 labels: {
@@ -1515,7 +2299,7 @@ class PlotraDashboard {
                     style: { colors: "#8A92A6" }
                 }
             },
-            legend: { show: false },
+            legend: { show: true, position: 'top' },
             grid: { show: true, strokeDashArray: 3 }
         };
 
@@ -1549,19 +2333,20 @@ class PlotraDashboard {
         if (!list) return;
         
         try {
-            const verifications = await api.getPendingVerifications({ limit: 5 });
-            if (verifications && verifications.length > 0) {
+            const raw = await api.getPendingVerifications({ limit: 5 });
+            const verifications = Array.isArray(raw) ? raw : (raw?.verifications || []);
+            if (verifications.length > 0) {
                 list.innerHTML = verifications.map(v => `
                     <tr>
                         <td class="small">
-                            <div class="fw-bold">${v.farmer_name || 'N/A'}</div>
-                            <div class="text-muted x-small-text">${v.cooperative_name || v.cooperative_code || 'N/A'}</div>
+                            <div class="fw-bold">${v.farmer_name || (v.first_name ? v.first_name + ' ' + v.last_name : 'N/A')}</div>
+                            <div class="text-muted x-small-text">${v.cooperative_name || v.cooperative_code || 'Individual'}</div>
                         </td>
                         <td>
                             <span class="badge bg-warning-subtle text-warning" style="font-size: 0.6rem;">Pending</span>
                         </td>
                         <td class="text-end small text-muted">
-                            ${new Date(v.created_at).toLocaleDateString()}
+                            ${v.created_at ? new Date(v.created_at).toLocaleDateString() : 'N/A'}
                         </td>
                     </tr>
                 `).join('');
@@ -1582,39 +2367,25 @@ class PlotraDashboard {
             const coops = await api.getCooperatives();
             if (coops && coops.length > 0) {
                 list.innerHTML = coops.map(coop => {
-                    const rate = coop.compliance_rate || Math.floor(Math.random() * 40) + 60;
-                    const color = rate > 90 ? 'success' : (rate > 70 ? 'info' : 'warning');
                     return `
                         <tr>
+                            <td><span class="badge bg-secondary">${coop.code || 'N/A'}</span></td>
+                            <td>${coop.name}</td>
+                            <td><span class="badge bg-primary">${coop.member_count || 0}</span></td>
                             <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-soft-primary rounded-circle p-2 me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                                        <i class="bi bi-building text-primary"></i>
-                                    </div>
-                                    <div class="fw-bold">${coop.name}</div>
-                                </div>
-                            </td>
-                            <td>${coop.total_farms || 0}</td>
-                            <td><span class="text-${color}">${rate}%</span></td>
-                            <td style="width: 200px;">
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-${color}" role="progressbar" style="width: ${rate}%"></div>
-                                </div>
-                            </td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary" onclick="app.viewCooperative('${coop.id}')">
-                                    <i class="bi bi-arrow-right"></i>
+                                <button class="btn btn-sm btn-info" onclick="app.showCooperativeDetails('${coop.id}')">
+                                    <i class="bi bi-eye me-1"></i> View
                                 </button>
                             </td>
                         </tr>
                     `;
                 }).join('');
             } else {
-                list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No cooperatives found</td></tr>';
+                list.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No cooperatives found</td></tr>';
             }
         } catch (error) {
             console.error('Failed to load coop performance:', error);
-            list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Error loading data</td></tr>';
+            list.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-danger">Error loading data</td></tr>';
         }
     }
 
@@ -1629,19 +2400,7 @@ class PlotraDashboard {
         }
     }
 
-    async confirmClearAllData() {
-        if (!confirm('CRITICAL: This will permanently delete ALL data from the platform. Proceed?')) return;
-        try {
-            this.showToast('Clearing platform data...', 'warning');
-            await api.clearAllData();
-            this.showToast('All data cleared successfully. Reloading...', 'success');
-            setTimeout(() => window.location.reload(), 2000);
-        } catch (error) {
-            this.showToast(error.message, 'error');
-        }
-    }
-
-    async renderCoopDashboard(content) {
+    async triggerGlobalSatelliteAnalysis() {
         try {
             const deliveries = await api.getDeliveries();
             content.innerHTML = `
@@ -1909,8 +2668,9 @@ class PlotraDashboard {
     async renderEUDRReviewerDashboard(content) {
         try {
             const overview = await api.getComplianceOverview();
-            const verifications = await api.getPendingVerifications({ limit: 5 });
-            
+            const rawVerif = await api.getPendingVerifications({ limit: 5 });
+            const verifications = Array.isArray(rawVerif) ? rawVerif : (rawVerif?.verifications || []);
+
             content.innerHTML = `
                 <div class="row g-4 mb-4">
                     <div class="col-md-3">
@@ -2207,36 +2967,45 @@ class PlotraDashboard {
             const list = document.getElementById('farmers-list');
             
             if (users && users.length > 0) {
-                document.getElementById('total-farmers-count').textContent = users.length;
-                document.getElementById('verified-farmers-count').textContent = users.filter(u => u.verification_status === 'verified').length;
-                document.getElementById('pending-farmers-count').textContent = users.filter(u => u.verification_status !== 'verified').length;
+                const totalCount = document.getElementById('total-farmers-count');
+                const verifiedCount = document.getElementById('verified-farmers-count');
+                const pendingCount = document.getElementById('pending-farmers-count');
+                
+                if (totalCount) totalCount.textContent = users.length;
+                if (verifiedCount) verifiedCount.textContent = users.filter(u => u.verification_status === 'verified').length;
+                if (pendingCount) pendingCount.textContent = users.filter(u => u.verification_status !== 'verified').length;
 
-                list.innerHTML = users.map(u => `
-                    <tr>
-                        <td>
-                            <div class="fw-bold">${u.first_name} ${u.last_name}</div>
-                            <div class="text-muted small">${u.email}</div>
-                        </td>
-                        <td>${u.county || 'N/A'}</td>
-                        <td>${u.cooperative_name || 'Individual'}</td>
-                        <td>${u.farm_count || 0}</td>
-                        <td><span class="badge ${u.verification_status === 'verified' ? 'bg-soft-success text-success' : 'bg-soft-warning text-warning'}">${u.verification_status || 'pending'}</span></td>
-                    </tr>
-                `).join('');
+                if (list) {
+                    list.innerHTML = users.map(u => `
+                        <tr>
+                            <td>
+                                <div class="fw-bold">${u.first_name} ${u.last_name}</div>
+                                <div class="text-muted small">${u.email}</div>
+                            </td>
+                            <td>${u.county || 'N/A'}</td>
+                            <td>${u.cooperative_name || 'Individual'}</td>
+                            <td>${u.farm_count || 0}</td>
+                            <td><span class="badge ${u.verification_status === 'verified' ? 'bg-soft-success text-success' : 'bg-soft-warning text-warning'}">${u.verification_status || 'pending'}</span></td>
+                        </tr>
+                    `).join('');
+                }
 
                 // Render Gender Chart
                 if (typeof ApexCharts !== 'undefined') {
-                    const males = users.filter(u => u.gender?.toLowerCase() === 'male').length;
-                    const females = users.filter(u => u.gender?.toLowerCase() === 'female').length;
-                    const others = users.length - males - females;
+                    const genderChartEl = document.querySelector("#farmer-gender-chart");
+                    if (genderChartEl) {
+                        const males = users.filter(u => u.gender?.toLowerCase() === 'male').length;
+                        const females = users.filter(u => u.gender?.toLowerCase() === 'female').length;
+                        const others = (users.length || 0) - males - females;
 
-                    new ApexCharts(document.querySelector("#farmer-gender-chart"), {
-                        series: [males, females, others],
-                        chart: { type: 'donut', height: 250 },
-                        labels: ['Male', 'Female', 'Other'],
-                        colors: ['#6f4e37', '#a67b5b', '#c4a77d'],
-                        legend: { position: 'bottom' }
-                    }).render();
+                        new ApexCharts(genderChartEl, {
+                            series: [males, females, others],
+                            chart: { type: 'donut', height: 250 },
+                            labels: ['Male', 'Female', 'Other'],
+                            colors: ['#6f4e37', '#a67b5b', '#c4a77d'],
+                            legend: { position: 'bottom' }
+                        }).render();
+                    }
                 }
             } else {
                 list.innerHTML = '<tr><td colspan="5" class="text-center py-4">No farmers found</td></tr>';
@@ -3466,26 +4235,29 @@ class PlotraDashboard {
             return;
         }
 
+        const list = document.getElementById('verifications-list');
         try {
-            const verifications = await api.getPendingVerifications();
-            const list = document.getElementById('verifications-list');
-            
-            if (verifications && verifications.length > 0) {
+            const raw = await api.getPendingVerifications();
+            // Backend returns array directly
+            const verifications = Array.isArray(raw) ? raw : (raw?.verifications || []);
+
+            if (verifications.length > 0) {
                 list.innerHTML = verifications.map(v => `
                     <tr>
                         <td>
-                            <div class="fw-bold">${v.farmer_name || 'N/A'}</div>
-                            <div class="text-muted small">${v.farmer_email || ''}</div>
+                            <div class="fw-bold">${v.farmer_name || (v.first_name ? v.first_name + ' ' + v.last_name : 'N/A')}</div>
+                            <div class="text-muted small">${v.farmer_email || v.email || ''}</div>
+                            <div class="text-muted small">${v.role || ''}</div>
                         </td>
-                        <td>${v.cooperative_name || v.cooperative_code || 'N/A'}</td>
-                        <td>${new Date(v.created_at).toLocaleDateString()}</td>
-                        <td><span class="badge bg-soft-warning text-warning">${v.status || 'Pending'}</span></td>
+                        <td>${v.cooperative_name || v.cooperative_code || 'Individual'}</td>
+                        <td>${v.created_at ? new Date(v.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td><span class="badge bg-soft-warning text-warning">${v.status || 'pending'}</span></td>
                         <td>
                             <div class="btn-group">
-                                <button class="btn btn-sm btn-outline-success" onclick="app.approveVerification('${v.id}')">
+                                <button class="btn btn-sm btn-outline-success" onclick="app.approveVerification('${v.id}')" title="Approve">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="app.rejectVerification('${v.id}')">
+                                <button class="btn btn-sm btn-outline-danger" onclick="app.rejectVerification('${v.id}')" title="Reject">
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             </div>
@@ -3493,7 +4265,7 @@ class PlotraDashboard {
                     </tr>
                 `).join('');
             } else {
-                list.innerHTML = '<tr><td colspan="5" class="text-center py-4">No pending verifications found.</td></tr>';
+                list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No pending verifications found.</td></tr>';
             }
         } catch (error) {
             console.error(error);
@@ -4046,7 +4818,7 @@ class PlotraDashboard {
                                                 <td>${(f.coffee_varieties || []).join(', ') || 'Not set'}</td>
                                                 <td>
                                                     <span class="badge ${f.verification_status === 'certified' ? 'bg-soft-success text-success' : 'bg-soft-warning text-warning'}">
-                                                        ${f.verification_status || 'Draft'}
+                                                        ${f.verification_status || "pending"}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -4493,14 +5265,13 @@ class PlotraDashboard {
             document.getElementById('farmerProfileForm')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const formData = {
-                    phone: document.getElementById('profilePhone').value,
+                    phone_number: document.getElementById('profilePhone').value,
                     id_number: document.getElementById('profileIdNumber').value,
                     date_of_birth: document.getElementById('profileDob').value,
                     gender: document.getElementById('profileGender').value,
                     county: document.getElementById('profileCounty').value,
                     subcounty: document.getElementById('profileSubCounty').value,
-                    ward: document.getElementById('profileWard').value,
-                    address: document.getElementById('profileAddress').value
+                    ward: document.getElementById('profileWard').value
                 };
                 
                 try {
@@ -4804,6 +5575,44 @@ class PlotraDashboard {
             
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
+            
+            // Generate Parcel ID after modal shows (PTP/YYYY/000XXX format)
+            // Use longer timeout to ensure modal is fully rendered
+            setTimeout(async () => {
+                await this.generateParcelId();
+            }, 300);
+            
+            // Pan to user location after modal is shown
+            setTimeout(() => {
+                this.panToUserLocation();
+            }, 500);
+        }
+    }
+    
+    async generateParcelId() {
+        const year = new Date().getFullYear();
+        const parcelIdInput = document.getElementById('parcelId');
+        if (!parcelIdInput) {
+            console.error('Parcel ID input not found');
+            return;
+        }
+        
+        try {
+            // Get farm count to generate sequential number
+            const farms = await api.getFarms();
+            const farmCount = farms && farms.length > 0 ? farms.length + 1 : 1;
+            const parcelNumber = String(farmCount).padStart(3, '0');
+            const parcelId = `PTP\\${year}\\${parcelNumber}`;
+            parcelIdInput.value = parcelId;
+            console.log('Generated Parcel ID:', parcelId);
+        } catch (error) {
+            // Fallback to random number if API fails
+            console.warn('API failed, using fallback:', error);
+            const farmCount = Math.floor(Math.random() * 999) + 1;
+            const parcelNumber = String(farmCount).padStart(3, '0');
+            const parcelId = `PTP\\${year}\\${parcelNumber}`;
+            parcelIdInput.value = parcelId;
+            console.log('Generated Parcel ID (fallback):', parcelId);
         }
     }
 
@@ -4815,7 +5624,7 @@ class PlotraDashboard {
             ]);
             
             const documents = requiredDocs || [];
-            const timeoutMinutes = sessionTimeout?.timeout_minutes || 30;
+            const timeoutMinutes = sessionTimeout?.session_timeout_minutes || sessionTimeout?.timeout_minutes || 30;
             
             content.innerHTML = `
                 <div class="row g-4">
@@ -5102,14 +5911,71 @@ class PlotraDashboard {
         }
     }
 
-    editFarm(farmId) {
-        // Navigate to farms page with farm selected
-        this.loadPage('farms');
-        // Store selected farm ID for editing
-        setTimeout(() => {
-            const editBtn = document.querySelector(`[data-farm-id="${farmId}"]`);
-            if (editBtn) editBtn.click();
-        }, 500);
+    async editFarm(farmId) {
+        try {
+            const farmsResponse = await api.getFarms();
+            const farms = Array.isArray(farmsResponse) ? farmsResponse : (farmsResponse.farms || []);
+            const farm = farms.find(f => f.id === farmId);
+            
+            if (!farm) {
+                this.showToast('Farm not found', 'error');
+                return;
+            }
+
+            // Open add farm modal in edit mode
+            this.showAddFarmModal(true, farm);
+        } catch (error) {
+            console.error('Error loading farm for edit:', error);
+            this.showToast('Failed to load farm data', 'error');
+        }
+    }
+
+    showAddFarmModal(isEdit = false, farmData = null) {
+        const modalEl = document.getElementById('addFarmModal');
+        if (modalEl) {
+            const form = document.getElementById('addFarmForm');
+            if (form) form.reset();
+            
+            // If editing, populate form with farm data
+            if (isEdit && farmData) {
+                const farmNameInput = document.getElementById('farmName');
+                if (farmNameInput) farmNameInput.value = farmData.farm_name || '';
+                
+                const totalAreaInput = document.getElementById('totalArea');
+                if (totalAreaInput) totalAreaInput.value = farmData.total_area_hectares || '';
+                
+                const coffeeAreaInput = document.getElementById('coffeeArea');
+                if (coffeeAreaInput) coffeeAreaInput.value = farmData.coffee_area_hectares || '';
+                
+                // Store farm ID for update
+                this.editingFarmId = farmData.id;
+                
+                // Set modal title
+                const modalTitle = document.querySelector('#addFarmModal .modal-title');
+                if (modalTitle) modalTitle.textContent = 'Edit Farm - Capture/Recapture Boundary';
+            } else {
+                this.editingFarmId = null;
+            }
+            
+            // Initialize farm map and GPS capture
+            this.initFarmMap();
+            this.initGPSCapture();
+            
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+            
+            // Generate Parcel ID after modal shows (PTP/YYYY/000XXX format)
+            setTimeout(async () => {
+                if (!isEdit) {
+                    await this.generateParcelId();
+                }
+            }, 300);
+            
+            // Pan to user location after modal is shown
+            setTimeout(() => {
+                this.panToUserLocation();
+            }, 500);
+        }
     }
 
     initFarmMap() {
@@ -5118,55 +5984,151 @@ class PlotraDashboard {
 
         // Check if map already exists
         if (this.farmMap) {
-            return; // Map already initialized
+            // If map exists, just pan to user location
+            this.panToUserLocation();
+            return;
         }
 
         try {
-            // Initialize Leaflet map
-            this.farmMap = L.map('farmMap').setView([-0.0236, 37.9062], 13);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(this.farmMap);
+            // Get user's location first
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        this.userLat = latitude;
+                        this.userLon = longitude;
+                        
+                        // Check if already initialized
+                        if (this.farmMap) {
+                            this.farmMap.setView([latitude, longitude], 15);
+                            return;
+                        }
+                        
+                        // Initialize Leaflet map with user's location
+                        this.farmMap = L.map('farmMap').setView([latitude, longitude], 15);
+                        
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; OpenStreetMap contributors'
+                        }).addTo(this.farmMap);
 
-            // Initialize polygon layer
-            this.farmPolygon = L.polygon([], {
-                color: '#2563eb',
-                fillColor: '#dbeafe',
-                fillOpacity: 0.5
-            }).addTo(this.farmMap);
+                        // Initialize polygon layer
+                        this.farmPolygon = L.polygon([], {
+                            color: '#2563eb',
+                            fillColor: '#dbeafe',
+                            fillOpacity: 0.5
+                        }).addTo(this.farmMap);
 
-            // Initialize GPS accuracy circle
-            this.accuracyCircle = L.circle([0, 0], {
-                radius: 0,
-                color: '#10b981',
-                fillColor: '#d1fae5',
-                fillOpacity: 0.3
-            }).addTo(this.farmMap);
+                        // Initialize GPS accuracy circle
+                        this.accuracyCircle = L.circle([latitude, longitude], {
+                            radius: position.coords.accuracy || 0,
+                            color: '#10b981',
+                            fillColor: '#d1fae5',
+                            fillOpacity: 0.3
+                        }).addTo(this.farmMap);
 
-            // Initialize marker for current location
-            this.currentLocationMarker = L.marker([0, 0], {
-                icon: L.divIcon({
-                    className: 'current-location-marker',
-                    html: '<div style="background-color: #2563eb; color: white; padding: 8px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);">📍</div>',
-                    iconSize: [40, 40]
-                })
-            }).addTo(this.farmMap);
+                        // Initialize marker for current location
+                        this.currentLocationMarker = L.marker([latitude, longitude], {
+                            icon: L.divIcon({
+                                className: 'current-location-marker',
+                                html: '<div style="background-color: #2563eb; color: white; padding: 8px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);">📍</div>',
+                                iconSize: [40, 40]
+                            })
+                        }).addTo(this.farmMap);
+                        
+                        // Update accuracy display
+                        const accuracyEl = document.getElementById('gpsAccuracy');
+                        if (accuracyEl) {
+                            accuracyEl.textContent = position.coords.accuracy.toFixed(1) + 'm';
+                        }
+                    },
+                    (error) => {
+                        console.warn('Could not get user location:', error);
+                        // Fall back to default location
+                        this.initMapWithDefaultLocation();
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 300000
+                    }
+                );
+            } else {
+                this.initMapWithDefaultLocation();
+            }
         } catch (error) {
             console.error('Map initialization error:', error);
-            // If map initialization fails, try to clean up and re-initialize
-            if (this.farmMap) {
-                try {
-                    this.farmMap.remove();
-                } catch (removeError) {
-                    console.error('Map removal error:', removeError);
+            this.initMapWithDefaultLocation();
+        }
+    }
+
+    initMapWithDefaultLocation() {
+        const mapDiv = document.getElementById('farmMap');
+        if (!mapDiv) return;
+        
+        // Check if already initialized
+        if (this.farmMap) {
+            this.farmMap.setView([-0.0236, 37.9062], 13);
+            return;
+        }
+        
+        // Default to Kenya center (Nairobi area)
+        this.farmMap = L.map('farmMap').setView([-0.0236, 37.9062], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(this.farmMap);
+
+        this.farmPolygon = L.polygon([], {
+            color: '#2563eb',
+            fillColor: '#dbeafe',
+            fillOpacity: 0.5
+        }).addTo(this.farmMap);
+
+        this.accuracyCircle = L.circle([-0.0236, 37.9062], {
+            radius: 0,
+            color: '#10b981',
+            fillColor: '#d1fae5',
+            fillOpacity: 0.3
+        }).addTo(this.farmMap);
+
+        this.currentLocationMarker = L.marker([-0.0236, 37.9062], {
+            icon: L.divIcon({
+                className: 'current-location-marker',
+                html: '<div style="background-color: #2563eb; color: white; padding: 8px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);">📍</div>',
+                iconSize: [40, 40]
+            })
+        }).addTo(this.farmMap);
+    }
+
+    panToUserLocation() {
+        if (navigator.geolocation && this.farmMap) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    this.farmMap.setView([latitude, longitude], 15);
+                    
+                    if (this.currentLocationMarker) {
+                        this.currentLocationMarker.setLatLng([latitude, longitude]);
+                    }
+                    if (this.accuracyCircle) {
+                        this.accuracyCircle.setLatLng([latitude, longitude]);
+                        this.accuracyCircle.setRadius(position.coords.accuracy);
+                    }
+                    
+                    const accuracyEl = document.getElementById('gpsAccuracy');
+                    if (accuracyEl) {
+                        accuracyEl.textContent = position.coords.accuracy.toFixed(1) + 'm';
+                    }
+                },
+                (error) => {
+                    console.warn('Could not get user location:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
                 }
-                this.farmMap = null;
-            }
-            // Clear map container
-            mapDiv.innerHTML = '';
-            // Try again
-            this.initFarmMap();
+            );
         }
     }
 
@@ -5354,81 +6316,206 @@ class PlotraDashboard {
 
     async handleCreateFarm() {
         try {
-            const varietiesStr = document.getElementById('farmVarieties').value || '';
+            // Helper function to get multiple select values
+            const getMultiSelectValues = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return [];
+                return Array.from(el.selectedOptions).map(opt => opt.value);
+            };
+
+            // Helper function to get checkbox values
+            const getCheckboxValues = (prefix) => {
+                const checkboxes = document.querySelectorAll(`input[id^="${prefix}"]:checked`);
+                return Array.from(checkboxes).map(cb => cb.value);
+            };
+
+            const varietiesStr = document.getElementById('farmVarieties')?.value || '';
+            const parcelIdValue = document.getElementById('parcelId')?.value || '';
+            const farmArea = parseFloat(document.getElementById('farmArea')?.value) || 0;
+            
+            // EUDR compliance data
+            const farmData = {
+                farm_name: parcelIdValue,
+                total_area_hectares: farmArea,
+                ownership_type: document.getElementById('landOwnershipType')?.value,
+                land_registration_number: document.getElementById('landRegNumber')?.value,
+                altitude_meters: parseFloat(document.getElementById('altitude')?.value) || 0,
+                soil_type: document.getElementById('soilType')?.value,
+                terrain_slope: document.getElementById('terrainSlope')?.value,
+                coffee_varieties: getCheckboxValues('coffeeVar').length > 0 ? 
+                    getCheckboxValues('coffeeVar') : 
+                    (document.getElementById('coffeeVariety')?.value ? [document.getElementById('coffeeVariety').value] : (varietiesStr ? varietiesStr.split(',').map(v => v.trim()) : [])),
+                year_coffee_first_planted: parseInt(document.getElementById('yearPlanted')?.value) || null,
+                estimated_coffee_plants: parseInt(document.getElementById('coffeePlants')?.value) || null,
+                farm_status: document.getElementById('farmStatus')?.value,
+                planting_method: document.getElementById('plantingMethod')?.value,
+                irrigation_type: document.getElementById('irrigationUsed')?.value,
+                estimated_annual_yield_kg: parseFloat(document.getElementById('estimatedYield')?.value) || null,
+                
+                // EUDR Mixed Farming Declaration
+                practice_mixed_farming: document.getElementById('mixedFarming')?.value === 'yes',
+                coffee_area_percentage: parseInt(document.getElementById('coffeePercent')?.value) || 100,
+                other_crops: getMultiSelectValues('otherCrops'),
+                has_livestock: document.getElementById('livestock')?.value === 'yes',
+                livestock_types: getMultiSelectValues('livestockType'),
+                crop_rotation_practiced: document.getElementById('cropRotation')?.value === 'yes',
+                
+                // EUDR Tree Cover & Deforestation
+                trees_planted_last_5_years: document.getElementById('treesPlantedLast5')?.value === 'yes',
+                tree_species_planted: getMultiSelectValues('treeSpecies'),
+                number_of_trees_planted: parseInt(document.getElementById('treeCount')?.value) || 0,
+                tree_planting_reason: getMultiSelectValues('treeReason'),
+                trees_cleared_last_5_years: document.getElementById('treesCleared')?.value === 'yes',
+                reason_for_clearing: document.getElementById('clearingReason')?.value,
+                current_tree_canopy_cover: document.getElementById('canopyCover')?.value,
+                
+                // Satellite Consent
+                satellite_consent: document.getElementById('satelliteConsent')?.checked || false,
+                historical_imagery_consent: document.getElementById('historicalImageryConsent')?.checked || false,
+                monitoring_frequency: document.getElementById('monitoringFrequency')?.value,
+                
+                centroid_lat: null,
+                centroid_lon: null,
+                parcels: []
+            };
             
             // Validate farm boundary if GPS capture was used
             if (this.gpsPoints && this.gpsPoints.length > 3) {
                 // Create GeoJSON polygon from GPS points
                 const polygonCoords = this.gpsPoints.map(point => [point.lon, point.lat]);
                 
-                const data = {
-                    farm_name: document.getElementById('farmName').value,
-                    total_area_hectares: parseFloat(document.getElementById('farmArea').value),
-                    coffee_varieties: varietiesStr ? varietiesStr.split(',').map(v => v.trim()) : [],
-                    years_farming: parseInt(document.getElementById('farmYears').value) || null,
-                    average_annual_production_kg: parseFloat(document.getElementById('farmProduction').value) || null,
-                    centroid_lat: this.gpsPoints.reduce((sum, point) => sum + point.lat, 0) / this.gpsPoints.length,
-                    centroid_lon: this.gpsPoints.reduce((sum, point) => sum + point.lon, 0) / this.gpsPoints.length,
-                    parcels: [
-                        {
-                            parcel_number: 1,
-                            parcel_name: 'Main Parcel',
-                            boundary_geojson: {
-                                type: 'Polygon',
-                                coordinates: [polygonCoords]
-                            },
-                            area_hectares: parseFloat(document.getElementById('farmArea').value),
-                            gps_accuracy_meters: Math.max(...this.gpsPoints.map(point => point.accuracy)),
-                            mapping_device: 'GPS',
-                            land_use_type: 'agroforestry'
-                        }
-                    ]
-                };
+                farmData.centroid_lat = this.gpsPoints.reduce((sum, point) => sum + point.lat, 0) / this.gpsPoints.length;
+                farmData.centroid_lon = this.gpsPoints.reduce((sum, point) => sum + point.lon, 0) / this.gpsPoints.length;
+                farmData.parcels = [
+                    {
+                        parcel_id: parcelIdValue,
+                        parcel_number: 1,
+                        parcel_name: parcelIdValue || 'Parcel 1',
+                        boundary_geojson: {
+                            type: 'Polygon',
+                            coordinates: [polygonCoords]
+                        },
+                        area_hectares: farmArea,
+                        gps_accuracy_meters: Math.max(...this.gpsPoints.map(point => point.accuracy)),
+                        mapping_device: 'GPS',
+                        land_use_type: 'agroforestry'
+                    }
+                ];
+            }
 
-                if (!data.farm_name) {
-                    this.showToast('Farm name is required', 'error');
-                    return;
-                }
+            if (!farmData.farm_name) {
+                this.showToast('Farm name is required', 'error');
+                return;
+            }
 
-                await api.createFarm(data);
-                this.showToast('Farm created successfully', 'success');
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addFarmModal'));
-                if (modal) modal.hide();
-                
-                if (this.currentPage === 'farms') {
-                    this.loadPage('farms');
-                }
-            } else {
-                // Fallback to manual entry if no GPS boundary captured
-                const data = {
-                    farm_name: document.getElementById('farmName').value,
-                    total_area_hectares: parseFloat(document.getElementById('farmArea').value),
-                    coffee_varieties: varietiesStr ? varietiesStr.split(',').map(v => v.trim()) : [],
-                    years_farming: parseInt(document.getElementById('farmYears').value) || null,
-                    average_annual_production_kg: parseFloat(document.getElementById('farmProduction').value) || null,
-                    centroid_lat: null,
-                    centroid_lon: null,
-                    parcels: []
-                };
+            // Check for EUDR high risk flags
+            if (farmData.trees_cleared_last_5_years) {
+                this.showToast('Warning: Trees cleared in last 5 years - HIGH EUDR RISK flag applied', 'warning');
+            }
 
-                if (!data.farm_name) {
-                    this.showToast('Farm name is required', 'error');
-                    return;
-                }
-
-                await api.createFarm(data);
-                this.showToast('Farm created successfully', 'success');
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addFarmModal'));
-                if (modal) modal.hide();
-                
-                if (this.currentPage === 'farms') {
-                    this.loadPage('farms');
-                }
+            await api.createFarm(farmData);
+            this.showToast('Farm created successfully with EUDR compliance data!', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addFarmModal'));
+            if (modal) modal.hide();
+            
+            if (this.currentPage === 'farms') {
+                this.loadPage('farms');
             }
         } catch (error) {
             console.error('Failed to create farm:', error);
             this.showToast(error.message || 'Failed to create farm', 'error');
         }
+    }
+
+    setupEUDRDynamicFields() {
+        // Mixed Farming - show/hide fields based on selection
+        const mixedFarming = document.getElementById('mixedFarming');
+        const coffeePercentField = document.getElementById('coffeePercentField');
+        const otherCropsField = document.getElementById('otherCropsField');
+        const livestockField = document.getElementById('livestockField');
+        const cropRotationField = document.getElementById('cropRotationField');
+
+        if (mixedFarming) {
+            mixedFarming.addEventListener('change', () => {
+                const isMixed = mixedFarming.value === 'yes';
+                if (coffeePercentField) coffeePercentField.style.display = isMixed ? 'block' : 'none';
+                if (otherCropsField) otherCropsField.style.display = isMixed ? 'block' : 'none';
+                if (livestockField) livestockField.style.display = isMixed ? 'block' : 'none';
+                if (cropRotationField) cropRotationField.style.display = isMixed ? 'block' : 'none';
+            });
+        }
+
+        // Coffee Percent slider
+        const coffeePercent = document.getElementById('coffeePercent');
+        const coffeePercentValue = document.getElementById('coffeePercentValue');
+        if (coffeePercent && coffeePercentValue) {
+            coffeePercent.addEventListener('input', () => {
+                coffeePercentValue.textContent = coffeePercent.value;
+            });
+        }
+
+        // Livestock - show/hide livestock type
+        const livestock = document.getElementById('livestock');
+        const livestockTypeField = document.getElementById('livestockTypeField');
+        if (livestock) {
+            livestock.addEventListener('change', () => {
+                if (livestockTypeField) {
+                    livestockTypeField.style.display = livestock.value === 'yes' ? 'block' : 'none';
+                }
+            });
+        }
+
+        // Trees Planted - show/hide tree fields
+        const treesPlantedLast5 = document.getElementById('treesPlantedLast5');
+        const treeSpeciesField = document.getElementById('treeSpeciesField');
+        const treeCountField = document.getElementById('treeCountField');
+        const treeReasonField = document.getElementById('treeReasonField');
+
+        if (treesPlantedLast5) {
+            treesPlantedLast5.addEventListener('change', () => {
+                const hasTrees = treesPlantedLast5.value === 'yes';
+                if (treeSpeciesField) treeSpeciesField.style.display = hasTrees ? 'block' : 'none';
+                if (treeCountField) treeCountField.style.display = hasTrees ? 'block' : 'none';
+                if (treeReasonField) treeReasonField.style.display = hasTrees ? 'block' : 'none';
+            });
+        }
+
+        // Trees Cleared - show/hide clearing reason and alert
+        const treesCleared = document.getElementById('treesCleared');
+        const clearingReasonField = document.getElementById('clearingReasonField');
+        const treeClearingAlert = document.getElementById('treeClearingAlert');
+
+        if (treesCleared) {
+            treesCleared.addEventListener('change', () => {
+                const cleared = treesCleared.value === 'yes';
+                if (clearingReasonField) clearingReasonField.style.display = cleared ? 'block' : 'none';
+                if (treeClearingAlert) treeClearingAlert.style.display = cleared ? 'block' : 'none';
+            });
+        }
+    }
+
+    clearFarmForm() {
+        // Clean up map to prevent re-initialization errors
+        if (this.farmMap) {
+            this.farmMap.remove();
+            this.farmMap = null;
+        }
+
+        // Reset all dynamic fields
+        const dynamicFields = [
+            'coffeePercentField', 'otherCropsField', 'livestockField', 'livestockTypeField',
+            'cropRotationField', 'treeSpeciesField', 'treeCountField', 'treeReasonField',
+            'clearingReasonField', 'treeClearingAlert', 'coopNameField', 'coopRegField'
+        ];
+        
+        dynamicFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+
+        // Reset coffee percent display
+        const coffeePercentValue = document.getElementById('coffeePercentValue');
+        if (coffeePercentValue) coffeePercentValue.textContent = '100';
     }
 
     showCreateCooperativeModal() {
@@ -5748,35 +6835,62 @@ class PlotraDashboard {
 
     async handleCreateCooperative() {
         try {
-            const selectedDocs = [];
-            document.querySelectorAll('#coopRequiredDocsList input[type="checkbox"]:checked').forEach(cb => {
-                selectedDocs.push(cb.value);
+            const docFiles = {};
+            document.querySelectorAll('#coopRequiredDocsList input[type="file"]').forEach(input => {
+                if (input.files.length > 0) {
+                    docFiles[input.dataset.docId] = input.files[0];
+                }
             });
             
-            const data = {
-                name: document.getElementById('coopName').value,
-                registration_number: document.getElementById('coopRegNumber').value || null,
-                cooperative_type: document.getElementById('coopType').value || null,
-                email: document.getElementById('coopEmail').value || null,
-                phone: document.getElementById('coopPhone').value || null,
-                address: document.getElementById('coopAddress').value || null,
-                county: document.getElementById('coopCounty').value || null,
-                district: document.getElementById('coopDistrict').value || null,
-                subcounty: document.getElementById('coopSubcounty').value || null,
-                ward: document.getElementById('coopWard').value || null,
-                admin_email: document.getElementById('coopAdminEmail').value,
-                admin_first_name: document.getElementById('coopAdminFirstName').value || null,
-                admin_last_name: document.getElementById('coopAdminLastName').value || null,
-                admin_phone: document.getElementById('coopAdminPhone').value || null,
-                required_documents: selectedDocs
-            };
-
-            if (!data.name || !data.admin_email) {
+            const formData = new FormData();
+            formData.append('name', document.getElementById('coopName').value);
+            formData.append('registration_number', document.getElementById('coopRegNumber').value || '');
+            formData.append('cooperative_type', document.getElementById('coopType').value || '');
+            formData.append('email', document.getElementById('coopEmail').value || '');
+            formData.append('phone', document.getElementById('coopPhone').value || '');
+            formData.append('address', document.getElementById('coopAddress').value || '');
+            formData.append('county', document.getElementById('coopCounty').value || '');
+            formData.append('district', document.getElementById('coopDistrict').value || '');
+            formData.append('subcounty', document.getElementById('coopSubcounty').value || '');
+            formData.append('ward', document.getElementById('coopWard').value || '');
+            formData.append('tax_id', '');
+            formData.append('latitude', '');
+            formData.append('longitude', '');
+            formData.append('establishment_date', '');
+            formData.append('contact_person', '');
+            formData.append('contact_person_phone', '');
+            formData.append('contact_person_email', '');
+            formData.append('legal_status', '');
+            formData.append('governing_document', '');
+            formData.append('admin_email', document.getElementById('coopAdminEmail').value);
+            formData.append('admin_first_name', document.getElementById('coopAdminFirstName').value || '');
+            formData.append('admin_last_name', document.getElementById('coopAdminLastName').value || '');
+            formData.append('admin_phone', document.getElementById('coopAdminPhone').value || '');
+            
+            // Collect document IDs as comma-separated string
+            const docIdList = Object.keys(docFiles);
+            if (docIdList.length > 0) {
+                formData.append('document_ids', docIdList.join(','));
+            }
+            
+            for (const [docId, file] of Object.entries(docFiles)) {
+                formData.append('documents', file);
+            }
+            
+            const nameVal = document.getElementById('coopName').value;
+            const adminEmailVal = document.getElementById('coopAdminEmail').value;
+            console.log('[DEBUG] Form values:', { name: nameVal, admin_email: adminEmailVal });
+            console.log('[DEBUG] FormData entries:');
+            for (let [key, value] of formData.entries()) {
+                console.log('  ', key, ':', value);
+            }
+            
+            if (!nameVal || !adminEmailVal) {
                 this.showToast('Cooperative name and admin email are required', 'error');
                 return;
             }
 
-            const response = await api.createCooperative(data);
+            const response = await api.createCooperativeWithDocs(formData);
             if (response) {
                 this.showToast('Cooperative created successfully', 'success');
                 const modalEl = document.getElementById('addCooperativeModal');
@@ -5795,6 +6909,7 @@ class PlotraDashboard {
     }
 
     async loadCooperativeRequiredDocs() {
+        const section = document.getElementById('coopRequiredDocsSection');
         const listDiv = document.getElementById('coopRequiredDocsList');
         if (!listDiv) return;
         
@@ -5802,25 +6917,30 @@ class PlotraDashboard {
             const docs = await api.getRequiredDocuments();
             
             if (!docs || docs.length === 0) {
-                listDiv.innerHTML = '<div class="col-12 text-muted">No required documents configured</div>';
+                section.style.display = 'none';
                 return;
             }
             
+            section.style.display = 'block';
+            
             listDiv.innerHTML = docs.map(doc => `
-                <div class="col-md-6">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="coopDoc_${doc.id}" value="${doc.id}" ${doc.is_required ? 'checked' : ''}>
-                        <label class="form-check-label" for="coopDoc_${doc.id}">
-                            ${doc.display_name}
-                            ${doc.is_required ? '<span class="badge bg-warning text-dark ms-1">Required</span>' : ''}
-                        </label>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <label class="form-label fw-bold">
+                                ${doc.display_name}
+                                ${doc.is_required ? '<span class="badge bg-warning text-dark ms-1">Required</span>' : ''}
+                            </label>
+                            ${doc.description ? `<small class="text-muted d-block mb-2">${doc.description}</small>` : ''}
+                            <input type="file" class="form-control" id="coopDoc_${doc.id}" data-doc-id="${doc.id}" data-doc-name="${doc.name}" ${doc.is_required ? 'required' : ''} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                            <small class="text-muted">Accepted: PDF, JPG, PNG, DOC</small>
+                        </div>
                     </div>
-                    ${doc.description ? `<small class="text-muted d-block">${doc.description}</small>` : ''}
                 </div>
             `).join('');
         } catch (error) {
             console.error('Error loading required docs:', error);
-            listDiv.innerHTML = '<div class="col-12 text-muted">Error loading documents</div>';
+            section.style.display = 'none';
         }
     }
 
@@ -6164,24 +7284,79 @@ class PlotraDashboard {
     async submitFarm() {
         try {
             const formData = new FormData(document.getElementById('addFarmForm'));
+            
+            // Helper function to get multiple select values
+            const getMultiSelectValues = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return [];
+                return Array.from(el.selectedOptions).map(opt => opt.value);
+            };
+
+            // Helper function to get checkbox values
+            const getCheckboxValues = (prefix) => {
+                const checkboxes = document.querySelectorAll(`input[id^="${prefix}"]:checked`);
+                return Array.from(checkboxes).map(cb => cb.value);
+            };
+
             const farmData = {
-                farm_name: formData.get('farmName'),
-                total_area_hectares: parseFloat(formData.get('farmArea')),
-                coffee_varieties: formData.get('farmVarieties') ?
-                    formData.get('farmVarieties').split(',').map(v => v.trim()) : [],
-                years_farming: formData.get('farmYears') ? parseInt(formData.get('farmYears')) : null,
-                average_annual_production_kg: formData.get('farmProduction') ? parseFloat(formData.get('farmProduction')) : null,
+                farm_name: document.getElementById('parcelId')?.value || 'Farm ' + new Date().getFullYear(),
+                total_area_hectares: parseFloat(formData.get('farmArea') || document.getElementById('farmArea')?.value || 0),
+                ownership_type: formData.get('landOwnershipType') || document.getElementById('landOwnershipType')?.value,
+                land_registration_number: formData.get('landRegNumber') || document.getElementById('landRegNumber')?.value,
+                altitude_meters: parseFloat(formData.get('altitude') || document.getElementById('altitude')?.value || 0),
+                soil_type: formData.get('soilType') || document.getElementById('soilType')?.value,
+                terrain_slope: formData.get('terrainSlope') || document.getElementById('terrainSlope')?.value,
+                coffee_varieties: getCheckboxValues('coffeeVar').length > 0 ? 
+                    getCheckboxValues('coffeeVar') : 
+                    (formData.get('coffeeVariety') ? [formData.get('coffeeVariety')] : []),
+                year_coffee_first_planted: parseInt(formData.get('yearPlanted') || document.getElementById('yearPlanted')?.value || 0),
+                estimated_coffee_plants: parseInt(formData.get('coffeePlants') || document.getElementById('coffeePlants')?.value || 0),
+                farm_status: formData.get('farmStatus') || document.getElementById('farmStatus')?.value,
+                planting_method: formData.get('plantingMethod') || document.getElementById('plantingMethod')?.value,
+                irrigation_type: formData.get('irrigationUsed') || document.getElementById('irrigationUsed')?.value,
+                estimated_annual_yield_kg: parseFloat(formData.get('estimatedYield') || document.getElementById('estimatedYield')?.value || 0),
+                
+                // EUDR Mixed Farming
+                practice_mixed_farming: formData.get('mixedFarming') === 'yes',
+                coffee_area_percentage: parseInt(formData.get('coffeePercent') || document.getElementById('coffeePercent')?.value || 100),
+                other_crops: getMultiSelectValues('otherCrops'),
+                has_livestock: formData.get('livestock') === 'yes',
+                livestock_types: getMultiSelectValues('livestockType'),
+                crop_rotation_practiced: formData.get('cropRotation') === 'yes',
+                
+                // EUDR Tree Cover
+                trees_planted_last_5_years: formData.get('treesPlantedLast5') === 'yes',
+                tree_species_planted: getMultiSelectValues('treeSpecies'),
+                number_of_trees_planted: parseInt(formData.get('treeCount') || document.getElementById('treeCount')?.value || 0),
+                tree_planting_reason: getMultiSelectValues('treeReason'),
+                trees_cleared_last_5_years: formData.get('treesCleared') === 'yes',
+                reason_for_clearing: formData.get('clearingReason') || document.getElementById('clearingReason')?.value,
+                current_tree_canopy_cover: formData.get('canopyCover') || document.getElementById('canopyCover')?.value,
+                
+                // Satellite Consent
+                satellite_consent: document.getElementById('satelliteConsent')?.checked,
+                historical_imagery_consent: document.getElementById('historicalImageryConsent')?.checked,
+                monitoring_frequency: formData.get('monitoringFrequency') || document.getElementById('monitoringFrequency')?.value,
+                
                 parcels: []
             };
 
+            // Use user's location for centroid if available
+            if (this.userLat && this.userLon) {
+                farmData.centroid_lat = this.userLat;
+                farmData.centroid_lon = this.userLon;
+            }
+
             // Add parcel if boundary was captured
             if (this.currentPolygon) {
+                const parcelIdValue = document.getElementById('parcelId').value;
                 const parcel = {
+                    parcel_id: parcelIdValue,
                     parcel_number: 1,
-                    parcel_name: 'Main Parcel',
+                    parcel_name: parcelIdValue || 'Parcel 1',
                     boundary_geojson: this.currentPolygon.geometry,
-                    area_hectares: parseFloat(formData.get('farmArea')),
-                    gps_accuracy_meters: document.getElementById('gpsAccuracy').textContent !== '--' ?
+                    area_hectares: farmData.total_area_hectares,
+                    gps_accuracy_meters: document.getElementById('gpsAccuracy')?.textContent !== '--' ?
                         parseFloat(document.getElementById('gpsAccuracy').textContent) : null,
                     mapping_device: navigator.userAgent,
                     land_use_type: 'agroforestry'
@@ -6189,7 +7364,7 @@ class PlotraDashboard {
 
                 // Add coffee area if specified
                 if (farmData.total_area_hectares) {
-                    parcel.coffee_area_hectares = farmData.total_area_hectares * 0.8; // Assume 80% coffee
+                    parcel.coffee_area_hectares = farmData.total_area_hectares * (farmData.coffee_area_percentage / 100);
                 }
 
                 farmData.parcels.push(parcel);
@@ -6200,8 +7375,12 @@ class PlotraDashboard {
                 throw new Error('Farm name and area are required');
             }
 
-            const result = await api.createFarm(farmData);
+            // Check for EUDR high risk flags
+            if (farmData.trees_cleared_last_5_years) {
+                this.showToast('Warning: Trees cleared in last 5 years - HIGH EUDR RISK flag applied', 'warning');
+            }
 
+            const result = await api.createFarm(farmData);
             this.showToast('Farm created successfully!', 'success');
 
             // Close modal and refresh
@@ -6848,11 +8027,42 @@ class PlotraDashboard {
             case 'farms':
                 await this.loadFarmsPage();
                 break;
+            case 'parcels':
+                await this.loadParcels(pageContent);
+                break;
+            case 'deliveries':
+                await this.loadDeliveries(pageContent);
+                break;
+            case 'batches':
+                await this.loadBatches(pageContent);
+                break;
+            case 'documents':
+                await this.loadDocuments(pageContent);
+                break;
+            case 'satellite':
+                await this.loadSatellite(pageContent);
+                break;
             case 'cooperatives':
                 await this.loadCooperatives(pageContent);
                 break;
             case 'farmers':
                 await this.loadFarmers(pageContent);
+                break;
+            case 'wallet':
+                await this.loadWallet(pageContent);
+                break;
+            case 'users':
+                await this.loadUsers(pageContent);
+                break;
+            case 'verification':
+            case 'pending_verification':
+                await this.loadVerification(pageContent);
+                break;
+            case 'sustainability':
+                await this.loadSustainability(pageContent);
+                break;
+            case 'system':
+                await this.loadSystemConfig(pageContent);
                 break;
             case 'compliance':
                 await this.loadCompliance(pageContent);
@@ -6924,42 +8134,38 @@ class PlotraDashboard {
                     </div>
                 </div>
 
-                    <!-- Tree & Crop Management -->
-                    <div class="col-12">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #6f4e37 0%, #8b4513 100%); color: white;">
-                                <h6 class="mb-0"><i class="bi bi-tree me-2"></i>Agroforestry Management</h6>
-                                <button class="btn btn-sm" style="background-color: #daa520; color: #3d2515;" onclick="app.openTreeMapping()">
-                                    <i class="bi bi-plus-circle me-1"></i>Map Trees & Crops
-                                </button>
-                            </div>
-                            <div class="card-body">
-                                <div id="treeManagement">
-                                    <div class="text-center py-3">
-                                        <div class="spinner-border spinner-border-sm" role="status"></div>
-                                        <span class="ms-2">Loading agroforestry data...</span>
-                                    </div>
+                <!-- Tree & Crop Management -->
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #6f4e37 0%, #8b4513 100%); color: white;">
+                            <h6 class="mb-0"><i class="bi bi-tree me-2"></i>Agroforestry Management</h6>
+                            <button class="btn btn-sm" style="background-color: #daa520; color: #3d2515;" onclick="app.openTreeMapping()">
+                                <i class="bi bi-plus-circle me-1"></i>Map Trees & Crops
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="treeManagement">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">Loading agroforestry data...</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Crop Analysis Results -->
-                    <div class="col-12">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header" style="background-color: #daa520; color: #3d2515;">
-                                <h6 class="mb-0"><i class="bi bi-seedling me-2"></i>Crop Differentiation Analysis</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="cropAnalysis">
-                                    <div class="text-center py-3">
-                                        <div class="spinner-border spinner-border-sm" role="status"></div>
-                                        <span class="ms-2">Loading crop analysis...</span>
-                                    </div>
-                                </div>
-                            </div>
+                <!-- Crop Analysis Results -->
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header" style="background-color: #daa520; color: #3d2515;">
+                            <h6 class="mb-0"><i class="bi bi-seedling me-2"></i>Crop Differentiation Analysis</h6>
                         </div>
-                    </div>
+                        <div class="card-body">
+                            <div id="cropAnalysis">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ms-2">Loading crop analysis...</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6989,7 +8195,18 @@ class PlotraDashboard {
 
     async loadFarms() {
         try {
-            const farms = await api.getFarms();
+            const farmsResponse = await api.getFarms();
+            let farms = [];
+            
+            if (farmsResponse) {
+                if (Array.isArray(farmsResponse)) {
+                    farms = farmsResponse;
+                } else if (farmsResponse.farms && Array.isArray(farmsResponse.farms)) {
+                    farms = farmsResponse.farms;
+                } else if (farmsResponse.id || farmsResponse.farm_name) {
+                    farms = [farmsResponse];
+                }
+            }
 
             const farmsList = document.getElementById('farmCalculations');
             if (!farmsList) {
@@ -7004,6 +8221,14 @@ class PlotraDashboard {
                         <p class="text-muted">Create your first farm to get started with satellite monitoring.</p>
                     </div>
                 `;
+                // Clear loading spinners — no farm means no data to load
+                const noFarmMsg = '<div class="text-muted text-center py-3"><i class="bi bi-info-circle me-1"></i>Add a farm to see data here.</div>';
+                const hist = document.getElementById('historicalAnalysis');
+                const tree = document.getElementById('treeManagement');
+                const crop = document.getElementById('cropAnalysis');
+                if (hist) hist.innerHTML = noFarmMsg;
+                if (tree) tree.innerHTML = noFarmMsg;
+                if (crop) crop.innerHTML = noFarmMsg;
             } else {
                 farmsList.innerHTML = farms.map(farm => `
                 <div class="col-md-6 col-lg-4">
@@ -7031,17 +8256,33 @@ class PlotraDashboard {
                             </div>
 
                             <div class="mt-auto">
-                                <button class="btn btn-outline-primary btn-sm me-2" onclick="app.viewFarmDetails(${farm.id})">
-                                    <i class="bi bi-eye me-1"></i>View Details
-                                </button>
-                                <button class="btn btn-outline-success btn-sm" onclick="app.requestSatelliteAnalysis(${farm.id})">
-                                    <i class="bi bi-satellite me-1"></i>Analyze
-                                </button>
+                                <div class="d-grid gap-2">
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm" style="background-color: #8b5a2b; color: white; border-color: #8b5a2b;" onclick="app.viewFarmDetails('${farm.id}')" title="View Details">
+                                            <i class="bi bi-eye me-1"></i>View
+                                        </button>
+                                        <button class="btn btn-sm" style="background-color: #6f4e37; color: white; border-color: #6f4e37;" onclick="app.requestSatelliteAnalysis('${farm.id}')" title="Analyze">
+                                            <i class="bi bi-satellite me-1"></i>Analyze
+                                        </button>
+                                        <button class="btn btn-sm" style="background-color: #a0522d; color: white; border-color: #a0522d;" onclick="app.editFarm('${farm.id}')" title="Capture/Edit">
+                                            <i class="bi bi-pencil me-1"></i>Capture
+                                        </button>
+                                        <button class="btn btn-sm" style="background-color: #d2691e; color: white; border-color: #d2691e;" onclick="app.editFarm('${farm.id}')" title="Recapture">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Recapture
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             `).join('');
+
+                // Load analysis sections for the first farm
+                const firstFarmId = farms[0].id;
+                this.loadHistoricalAnalysis(firstFarmId);
+                this.loadTreeManagement(firstFarmId);
+                this.loadCropAnalysis(firstFarmId);
             }
         } catch (error) {
             console.error('Error loading farms:', error);
@@ -7053,12 +8294,22 @@ class PlotraDashboard {
                     <small>${error.message}</small>
                 </div>
             `;
+            }
         }
     }
 
     async viewFarmDetails(farmId) {
         try {
-            const farm = await api.getFarm(farmId);
+            // Fetch farm data first
+            const farmsResponse = await api.getFarms();
+            const farms = Array.isArray(farmsResponse) ? farmsResponse : (farmsResponse.farms || []);
+            const farm = farms.find(f => f.id === farmId);
+            
+            if (!farm) {
+                this.showToast('Farm not found', 'error');
+                return;
+            }
+            
             const parcels = await api.getParcels(farmId);
 
             const modal = new bootstrap.Modal(document.getElementById('farmDetailsModal'));
@@ -8207,3 +9458,83 @@ window.app = app;
 window.showRegisterModal = function() { app.showRegisterModal(); };
 window.showLoginModal = function() { app.showLoginModal(); };
 window.subscribeNewsletter = function() { app.subscribeNewsletter(); };
+
+// Phone verification global functions
+window.selectCountryCode = function(code, country) {
+    document.getElementById('selectedCountryCode').textContent = code;
+    document.getElementById('countryCodeBtn').click(); // Close dropdown
+};
+
+window.selectLoginCountryCode = function(code, country) {
+    document.getElementById('loginSelectedCountryCode').textContent = code;
+    app.loginCountryCode = code;
+    document.getElementById('loginCountryCodeBtn').click(); // Close dropdown
+};
+
+window.updateLoginCountryCode = function() {
+    const select = document.getElementById('loginCountryCodeSelect');
+    if (select) {
+        app.loginCountryCode = select.value;
+    }
+};
+
+window.updateRegCountryCode = function() {
+    const select = document.getElementById('regCountryCodeSelect');
+    if (select) {
+        app.regCountryCode = select.value;
+    }
+};
+
+window.updateVerifyCountryCode = function() {
+    const select = document.getElementById('verifyCountryCodeSelect');
+    if (select) {
+        app.verifyCountryCode = select.value;
+    }
+};
+
+window.showPhoneVerifyStep1 = function() { app.showPhoneVerifyStep1(); };
+window.resendOTP = function() { app.resendOTP(); };
+
+// Add OTP button event listeners when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // OTP Send button
+    const sendOTPBtn = document.getElementById('btnSendOTP');
+    if (sendOTPBtn) {
+        sendOTPBtn.addEventListener('click', function() {
+            app.showPhoneVerifyStep2();
+        });
+    }
+    
+    // OTP Verify button
+    const verifyOTPBtn = document.getElementById('btnVerifyOTP');
+    if (verifyOTPBtn) {
+        verifyOTPBtn.addEventListener('click', function() {
+            app.verifyOTP();
+        });
+    }
+    
+    // OTP input - auto-submit on 6 digits
+    const verifyOTPInput = document.getElementById('verifyOTP');
+    if (verifyOTPInput) {
+        verifyOTPInput.addEventListener('input', function() {
+            if (this.value.length === 6) {
+                app.verifyOTP();
+            }
+        });
+    }
+    
+    // Phone input - allow numbers only
+    const verifyPhoneInput = document.getElementById('verifyPhoneNumber');
+    if (verifyPhoneInput) {
+        verifyPhoneInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
+    
+    const regPhoneInput = document.getElementById('regPhone');
+    if (regPhoneInput) {
+        regPhoneInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
+});

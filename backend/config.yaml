@@ -1,97 +1,84 @@
-# Plotra Platform Configuration
-# Environment-based configuration loader
-
 app:
   name: "Plotra Platform"
   version: "1.0.0"
   debug: true
   env: "development"
-  secret_key: "${KIPAWA_SECRET_KEY:-change-me-in-production}"
+  secret_key: "development-key-change-in-production"
   algorithm: "HS256"
   access_token_expire_minutes: 30
-  frontend_url: "${KIPAWA_FRONTEND_URL:-http://localhost:8080}"
+  frontend_url: "http://dev.plotra.eu"
 
 database:
-  host: "${KIPAWA_DB_HOST:-localhost}"
+  host: postgres
   port: 5432
-  username: "${KIPAWA_DB_USER:-postgres}"
-  password: "${KIPAWA_DB_PASSWORD:-postgres}"
-  name: "${KIPAWA_DB_NAME:-plotra_db}"
+  username: postgres
+  password: postgres
+  name: plotra_db
   pool_size: 10
   max_overflow: 20
   async_mode: true
 
 redis:
-  host: "${KIPAWA_REDIS_HOST:-localhost}"
+  host: localhost
   port: 6379
   db: 0
 
 postgis:
   enabled: true
-  srid: 4326  # WGS84
+  srid: 4326
 
 satellite:
   provider: "sentinel_hub"
-  api_key: "${SENTINEL_API_KEY:-}"
+  api_key: ""
   base_url: "https://services.sentinel-hub.com"
-  simulation_mode: "${SENTINEL_SIMULATION_MODE:-true}"
+  simulation_mode: true
   ndvi_threshold: 0.65
-  deforestation_baseline_year: 2014  # 10-year lookback
-  biomass_threshold: 100  # tons/hectare
+  deforestation_baseline_year: 2014
+  biomass_threshold: 100
 
 eudr:
   compliance_status: "Under Review"
   certificate_validity_days: 365
   dds_version: "1.0"
-  portal_url: "${EUDR_PORTAL_URL:-https://eudr-portal.example.com}"
+  portal_url: "https://eudr-portal.example.com"
 
 geospatial:
   gps_accuracy_threshold_meters: 10
   min_polygon_area_hectares: 0.1
   max_farm_polygons_per_farmer: 10
   parent_child_validation: true
-  boundary_overlap_tolerance: 0.01  # 1% overlap tolerance
+  boundary_overlap_tolerance: 0.01
 
 storage:
   documents_path: "./uploads/documents"
   certificates_path: "./uploads/certificates"
   photos_path: "./uploads/photos"
-  s3_bucket: "${KIPAWA_S3_BUCKET:-plotra-uploads}"
-  s3_endpoint: "${KIPAWA_S3_ENDPOINT:-}"
-  s3_access_key: "${KIPAWA_S3_ACCESS_KEY:-}"
-  s3_secret_key: "${KIPAWA_S3_SECRET_KEY:-}"
-  s3_region: "${KIPAWA_S3_REGION:-af-south-1}"
+  s3_bucket: "plotra-uploads"
+  s3_endpoint: ""
+  s3_access_key: ""
+  s3_secret_key: ""
+  s3_region: "af-south-1"
 
 celery:
-  broker_url: "redis://${KIPAWA_REDIS_HOST:-localhost}:6379/1"
-  result_backend: "redis://${KIPAWA_REDIS_HOST:-localhost}:6379/2"
+  broker_url: "redis://localhost:6379/1"
+  result_backend: "redis://localhost:6379/2"
 
 cors:
   allowed_origins:
     - "http://localhost:3000"
     - "http://localhost:8080"
     - "http://127.0.0.1:8080"
-    - "http://localhost:8081"
-    - "http://127.0.0.1:8081"
-    - "http://localhost:8000"
-    - "http://127.0.0.1:8000"
     - "http://188.166.28.64"
     - "http://188.166.28.64:8080"
-    - "http://188.166.28.64:8000"
-    - "http://plotra.eu"
-    - "http://plotra.eu:8080"
-    - "https://plotra.eu"
-    - "https://api.plotra.eu"
+    - "http://dev.plotra.eu"
     - "https://dev.plotra.eu"
-    - "http://mail.plotra.eu"
-    - "https://mail.plotra.eu"
   allow_credentials: true
 
 payments:
-  enabled: false  # Future feature
-  mpesa_consumer_key: "${M_PESA_CONSUMER_KEY:-}"
-  mpesa_consumer_secret: "${M_PESA_CONSUMER_SECRET:-}"
-  mpesa_shortcode: "${M_PESA_SHORTCODE:-}"
+  enabled: false
+  mpesa_consumer_key: ""
+  mpesa_consumer_secret: ""
+  mpesa_shortcode: ""
   escrow_enabled: true
 
 verification:
@@ -107,8 +94,8 @@ logging:
 
 sms:
   provider: "africastalking"
-  api_key: "7edd2b22cd9c1d9ffc08a34681c532b27b82500d9401b73ebb65f0e3c6264a81"
-  api_secret: "e5b1c8a9c3f1d2e4b5a6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2g3h4i5j6k7l8m9n0"
-  username: "SWIFTCOINS"
-  sender_id: "swiftcoinsuser"
+  api_key: "test_key"
+  api_secret: "test_secret"
+  username: "test_user"
+  sender_id: "PLOTRA"
   debug_mode: true

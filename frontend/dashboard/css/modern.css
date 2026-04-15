@@ -1324,6 +1324,17 @@ body::before {
 
 .auth-modal .modal-body {
     padding: 2rem;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    text-align: left !important;
+}
+
+.auth-modal .modal-body .step-content {
+    text-align: left !important;
+}
+
+.auth-modal .modal-body .step-content label {
+    text-align: left !important;
 }
 
 .auth-modal .form-control {
@@ -1720,4 +1731,12 @@ body::before {
     color: var(--coffee-600);
     background: transparent;
     border-bottom-color: var(--coffee-500);
+}
+
+.auth-modal .modal-body {
+    text-align: left !important;
+}
+
+.auth-modal .modal-body .step-content {
+    text-align: left !important;
 }

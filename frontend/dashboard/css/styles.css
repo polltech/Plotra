@@ -493,6 +493,8 @@ body.auth-active #app-container {
 
 .step-content.active {
     display: block;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 @keyframes fadeIn {
@@ -1037,20 +1039,24 @@ body.auth-active #app-container {
     flex-wrap: wrap !important;
 }
 
-/* Terms Checkbox - Square, small, coffee color, left aligned */
+/* Terms Checkbox */
 .terms-checkbox {
-    width: 16px !important;
-    height: 16px !important;
-    min-width: 16px !important;
+    width: 18px !important;
+    height: 18px !important;
     accent-color: #6f4e37 !important;
     cursor: pointer !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    margin-right: 5px !important;
+    vertical-align: middle !important;
 }
 
 .terms-checkbox + label {
-    display: inline-block !important;
-    text-align: left !important;
-    margin-left: 0 !important;
-    padding-left: 0 !important;
-} 
+    display: inline !important;
+    font-size: 0.875rem !important;
+    color: #212529 !important;
+    vertical-align: middle !important;
+}
+
+#regStep4 .d-flex.align-items-center {
+    gap: 8px !important;
+}
+

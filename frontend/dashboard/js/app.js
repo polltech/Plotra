@@ -550,23 +550,33 @@ class PlotraDashboard {
         document.body.style.paddingRight = '';
     }
     
-    showApp() {
-        console.log('Showing app...');
-        document.body.classList.remove('auth-active');
-        const appContainer = document.getElementById('app-container');
-        const landingPage = document.getElementById('landing-page');
-        if (appContainer) appContainer.classList.remove('d-none');
-        if (landingPage) landingPage.classList.add('d-none');
-
-        this.loadCurrentUser().then(() => {
-            this.updateSidebarNavigation();
-            this.loadPage('dashboard');
-        }).catch(err => {
-            console.error('Failed to show app:', err);
-            this.showToast('Failed to load user data', 'error');
-        });
-    }
+       showApp() {
+    console.log('Showing app...');
+    document.body.classList.remove('auth-active');
+    document.documentElement.classList.add('pre-auth');
     
+    const appContainer = document.getElementById('app-container');
+    const landingPage = document.getElementById('landing-page');
+    const appLoading = document.getElementById('app-loading');
+    
+    if (appContainer) appContainer.classList.remove('d-none');
+    if (landingPage) {
+        landingPage.classList.add('d-none');
+        landingPage.style.display = 'none';
+    }
+
+    this.loadCurrentUser().then(() => {
+        if (appLoading) appLoading.style.display = 'none';
+        this.updateSidebarNavigation();
+        this.loadPage('dashboard');
+    }).catch(err => {
+        console.error('Failed to show app:', err);
+        if (appLoading) appLoading.style.display = 'none';
+        this.showToast('Failed to load user data', 'error');
+    });
+    }
+        
+   
     async loadCurrentUser() {
         try {
             this.currentUser = await api.getCurrentUser();
@@ -1045,7 +1055,7 @@ class PlotraDashboard {
             
             // Validate cooperative code with backend
             try {
-                const response = await fetch(`${apiBaseUrl}/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
+                const response = await fetch(`${apiBaseUrl}/coop/cooperatives/validate-code?code=` + encodeURIComponent(cooperativeCode), {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1092,7 +1102,7 @@ class PlotraDashboard {
                 // Debounce search
                 searchTimeout = setTimeout(async () => {
                     try {
-                        const response = await fetch(`${apiBaseUrl}/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
+                        const response = await fetch(`${apiBaseUrl}/coop/cooperatives/search?code=` + encodeURIComponent(searchTerm), {
                             method: 'GET',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -4818,7 +4828,7 @@ class PlotraDashboard {
                                                 <td>${(f.coffee_varieties || []).join(', ') || 'Not set'}</td>
                                                 <td>
                                                     <span class="badge ${f.verification_status === 'certified' ? 'bg-soft-success text-success' : 'bg-soft-warning text-warning'}">
-                                                        ${f.verification_status || 'Draft'}
+                                                        ${f.verification_status || "pending"}
                                                     </span>
                                                 </td>
                                                 <td>
