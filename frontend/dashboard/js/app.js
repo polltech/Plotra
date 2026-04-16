@@ -1769,10 +1769,10 @@ class PlotraDashboard {
                 }
             }
             
-            // Enable submit button (GPS not required)
+            // Enable submit button (GPS not required) - always enabled, validate on click
             const submitBtn = document.getElementById('submitTab1');
             if (submitBtn) {
-                submitBtn.disabled = !allComplete;
+                submitBtn.disabled = false;
             }
             
             return allComplete;
@@ -1958,41 +1958,45 @@ class PlotraDashboard {
         };
         
         const farmArea = parseFloat(document.getElementById('farmArea')?.value) || 0;
+        const parcelId = document.getElementById('parcelId')?.value || `PTP/${new Date().getFullYear()}/000001`;
         
-        // GPS polygon data
+        // GPS polygon data - always create at least one parcel
         let parcels = [];
+        const baseParcel = {
+            parcel_number: parcelId,
+            parcel_name: document.getElementById('farmName')?.value || 'Parcel 1',
+            area_hectares: farmArea,
+            land_use_type: document.getElementById('farmingMethod')?.value || 'monocrop',
+            ownership_type: document.getElementById('landOwnershipType')?.value,
+        };
+        
+        // Add GPS polygon if captured
         if (this.gpsPoints && this.gpsPoints.length > 3) {
             const polygonCoords = this.gpsPoints.map(point => [point.lon, point.lat]);
-            parcels = [{
-                parcel_number: document.getElementById('parcelId')?.value || `PTP/${new Date().getFullYear()}/000001`,
-                parcel_name: document.getElementById('farmName')?.value || 'Parcel 1',
-                boundary_geojson: {
-                    type: 'Polygon',
-                    coordinates: [polygonCoords]
-                },
-                area_hectares: farmArea,
-                gps_accuracy_meters: Math.max(...this.gpsPoints.map(point => point.accuracy)),
-                mapping_device: 'GPS',
-                // Basic fields
-                land_use_type: document.getElementById('farmingMethod')?.value || 'monocrop',
-                ownership_type: document.getElementById('landOwnershipType')?.value,
-                
-                // Advanced fields (Tab 2)
-                ...(mode === 'full' ? {
-                    parent_parcel_id: document.getElementById('parentParcel')?.value || null,
-                    agroforestry_start_year: parseInt(document.getElementById('agroforestryStartYear')?.value) || null,
-                    estimated_coffee_plants: parseInt(document.getElementById('coffeePlants')?.value) || null,
-                    previous_land_use: document.getElementById('previousLandUse')?.value || null,
-                    certifications: getMultiSelectValues('certificationStatus'),
-                    other_crops: getMultiSelectValues('intercroppedSpecies'),
-                    shade_tree_count: document.getElementById('shadeTrees')?.value === 'yes' ? 
-                        parseInt(document.getElementById('canopyCover')?.value) || 0 : 0,
-                } : {})
-            }];
+            baseParcel.boundary_geojson = {
+                type: 'Polygon',
+                coordinates: [polygonCoords]
+            };
+            baseParcel.gps_accuracy_meters = Math.max(...this.gpsPoints.map(point => point.accuracy));
+            baseParcel.mapping_device = 'GPS';
+            
+            // Advanced fields (Tab 2)
+            if (mode === 'full') {
+                baseParcel.parent_parcel_id = document.getElementById('parentParcel')?.value || null;
+                baseParcel.agroforestry_start_year = parseInt(document.getElementById('agroforestryStartYear')?.value) || null;
+                baseParcel.estimated_coffee_plants = parseInt(document.getElementById('coffeePlants')?.value) || null;
+                baseParcel.previous_land_use = document.getElementById('previousLandUse')?.value || null;
+                baseParcel.certifications = getMultiSelectValues('certificationStatus');
+                baseParcel.other_crops = getMultiSelectValues('intercroppedSpecies');
+                baseParcel.shade_tree_count = document.getElementById('shadeTrees')?.value === 'yes' ? 
+                    parseInt(document.getElementById('canopyCover')?.value) || 0 : 0;
+            }
         }
         
+        parcels = [baseParcel];
+        
         const farmData = {
-            farm_name: document.getElementById('farmName')?.value,
+            farm_name: document.getElementById('farmName')?.value || parcelId,
             total_area_hectares: farmArea,
             ownership_type: document.getElementById('landOwnershipType')?.value,
             coffee_varieties: [document.getElementById('coffeeVariety')?.value].filter(Boolean),
@@ -2004,7 +2008,7 @@ class PlotraDashboard {
             farmer_phone: document.getElementById('farmerPhone')?.value,
             farmer_national_id: document.getElementById('farmerNationalId')?.value,
             farmer_gender: document.getElementById('farmerGender')?.value,
-            membership_number: document.getElementById('membershipNumber')?.value,
+            membership_number: document.getElementById('membershipNumber')?.value || parcelId,
             farm_location: document.getElementById('farmLocation')?.value,
             
             centroid_lat: this.gpsPoints ? this.gpsPoints.reduce((sum, p) => sum + p.lat, 0) / this.gpsPoints.length : null,
