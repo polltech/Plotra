@@ -3231,10 +3231,21 @@ class PlotraDashboard {
 
     async renderFarmerDashboard(content) {
         console.log('Rendering Farmer Dashboard...');
+        console.log('Content element:', content);
         if (!content) {
             console.error('Content element is null!');
-            return;
+            // Try to find it directly
+            content = document.getElementById('pageContent');
+            console.log('Found content:', content);
+            if (!content) {
+                document.body.innerHTML = '<div style="padding:50px;color:red;">ERROR: No pageContent element!</div>';
+                return;
+            }
         }
+        
+        // Force display
+        content.style.display = 'block';
+        
         try {
             console.log('Fetching farmer data...');
             const [farmsResponse, deliveries, stats] = await Promise.all([
@@ -3429,8 +3440,10 @@ class PlotraDashboard {
 
         } catch (error) {
             console.error('Failed to load farmer dashboard:', error);
-            this.renderOfflineAlert(content);
+            content.innerHTML = '<div class="p-4 text-danger">Error: ' + error.message + '</div>';
         }
+        
+        console.log('Dashboard HTML set, length:', content.innerHTML.length);
     }
 
     initFarmerDashboardCharts(deliveries) {
