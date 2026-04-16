@@ -24,6 +24,52 @@ class PlotraDashboard {
         this.setupOfflineDetection();
         this.initFarmMapping(); // Initialize farm mapping system
         this.setupNavigation(); // Initialize navigation
+        this.startSessionMonitor(); // Monitor session validity
+    }
+    
+    startSessionMonitor() {
+        // Check session validity every 30 seconds
+        setInterval(() => {
+            const token = localStorage.getItem('plotra_token');
+            if (!token || token.length <= 10) {
+                this.handleSessionExpired();
+                return;
+            }
+            
+            // Try to validate token with API
+            this.validateToken().then(isValid => {
+                if (!isValid) {
+                    this.handleSessionExpired();
+                }
+            }).catch(() => {
+                this.handleSessionExpired();
+            });
+        }, 30000);
+    }
+    
+    async validateToken() {
+        try {
+            const response = await fetch(`${this.apiUrl}/auth/me`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('plotra_token')}`
+                }
+            });
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }
+    
+    handleSessionExpired() {
+        // Clear storage
+        localStorage.removeItem('plotra_token');
+        localStorage.removeItem('plotra_user');
+        
+        // Show toast notification
+        this.showToast('Session expired. Please login again.', 'warning');
+        
+        // Redirect to landing page
+        this.showLandingPage();
     }
     
     checkResetPasswordToken() {
