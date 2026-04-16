@@ -164,10 +164,16 @@ async def register_user(
         if user_data.id_number:
             user.national_id = user_data.id_number
         
+        # Store hard stop fields directly (not in kyc_data)
+        if user_data.gender:
+            user.gender = user_data.gender
+        if user_data.payout_recipient_id:
+            user.payout_recipient_id = user_data.payout_recipient_id
+        if user_data.consent:
+            user.consent_timestamp = datetime.utcnow()
+        
         # Store additional optional fields in kyc_data JSON
         kyc_data = {}
-        if user_data.gender:
-            kyc_data['gender'] = user_data.gender
         if user_data.id_type:
             kyc_data['id_type'] = user_data.id_type
         if user_data.id_number:
@@ -176,8 +182,6 @@ async def register_user(
             kyc_data['cooperative_code'] = user_data.cooperative_code
         if user_data.payout_method:
             kyc_data['payout_method'] = user_data.payout_method
-        if user_data.payout_recipient_id:
-            kyc_data['payout_recipient_id'] = user_data.payout_recipient_id
         if user_data.payout_bank_name:
             kyc_data['payout_bank_name'] = user_data.payout_bank_name
         if user_data.payout_account_number:
@@ -191,18 +195,33 @@ async def register_user(
         await db.refresh(user)
         
         # Link user to cooperative if cooperative_code is provided
+        # Generate membership number: PCF/YEAR/XXXX
         if user_data.cooperative_code:
             from app.models.user import Cooperative, CooperativeMember
+            from sqlalchemy import func
+            
             # Find cooperative by code
             coop_query = select(Cooperative).where(Cooperative.code == user_data.cooperative_code)
             coop_result = await db.execute(coop_query)
             cooperative = coop_result.scalar_one_or_none()
             
             if cooperative:
-                # Create cooperative membership
+                # Get count of existing members to generate next number
+                count_result = await db.execute(
+                    select(func.count(CooperativeMember.id))
+                    .where(CooperativeMember.cooperative_id == cooperative.id)
+                )
+                member_count = count_result.scalar() or 0
+                current_year = datetime.utcnow().year
+                
+                # Generate membership number: PCF/YEAR/XXXX
+                membership_number = f"PCF/{current_year}/{str(member_count + 1).zfill(4)}"
+                
+                # Create cooperative membership with generated number
                 membership = CooperativeMember(
                     user_id=user.id,
                     cooperative_id=cooperative.id,
+                    membership_number=membership_number,
                     is_active=True,
                     cooperative_role="member"
                 )

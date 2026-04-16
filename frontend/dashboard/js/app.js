@@ -1381,12 +1381,628 @@ class PlotraDashboard {
                     this.initGPSCapture();
                     this.setupEUDRDynamicFields();
                     this.generateParcelId();
+                    this.prefillFarmFormFromUser();
+                    this.setupTabValidation();
                 });
                 
                 addFarmModal.addEventListener('hidden.bs.modal', () => {
                     this.clearFarmForm();
                 });
+                
+                // Tab button event listeners
+                document.getElementById('submitTab1')?.addEventListener('click', () => this.submitTab1Basic());
+                document.getElementById('submitTab2')?.addEventListener('click', () => this.submitTab2Advanced());
+                
+                // GPS Capture button in view modal
+                document.getElementById('openGpsCaptureBtn')?.addEventListener('click', () => this.openFullScreenGpsCapture());
+                
+                // Full screen GPS capture modal events
+                this.setupFullScreenGpsCapture();
             }
+        }
+    }
+    
+    // Setup full screen GPS capture modal
+    setupFullScreenGpsCapture() {
+        const gpsModal = document.getElementById('gpsCaptureModal');
+        if (!gpsModal) return;
+        
+        this.gpsCapturePoints = [];
+        this.gpsCaptureMap = null;
+        this.gpsCaptureWatchId = null;
+        
+        // Button event listeners
+        document.getElementById('gpsCaptureStartBtn')?.addEventListener('click', () => this.startGpsCaptureFullScreen());
+        document.getElementById('gpsCaptureAddBtn')?.addEventListener('click', () => this.addGpsPointFullScreen());
+        document.getElementById('gpsCaptureManualBtn')?.addEventListener('click', () => this.enableManualGpsCapture());
+        document.getElementById('gpsCaptureFinishBtn')?.addEventListener('click', () => this.finishGpsCaptureFullScreen());
+        document.getElementById('gpsCaptureClearBtn')?.addEventListener('click', () => this.clearGpsCaptureFullScreen());
+        document.getElementById('gpsCaptureSaveBtn')?.addEventListener('click', () => this.saveGpsPolygonToFarm());
+        
+        // Modal close - stop GPS tracking
+        gpsModal.addEventListener('hidden.bs.modal', () => {
+            this.stopGpsCaptureFullScreen();
+        });
+        
+        // Initialize map when modal opens
+        gpsModal.addEventListener('shown.bs.modal', () => {
+            this.initGpsCaptureMap();
+        });
+    }
+    
+    // Open full screen GPS capture modal
+    openFullScreenGpsCapture() {
+        this.currentGpsFarmId = this.currentViewFarmId;
+        const modal = new bootstrap.Modal(document.getElementById('gpsCaptureModal'));
+        modal.show();
+    }
+    
+    // Initialize GPS capture map
+    initGpsCaptureMap() {
+        const mapDiv = document.getElementById('gpsCaptureMap');
+        if (!mapDiv) return;
+        
+        if (this.gpsCaptureMap) {
+            this.gpsCaptureMap.invalidateSize();
+            return;
+        }
+        
+        // Get user location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    this.gpsCaptureUserLat = latitude;
+                    this.gpsCaptureUserLon = longitude;
+                    
+                    this.gpsCaptureMap = L.map('gpsCaptureMap').setView([latitude, longitude], 16);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap'
+                    }).addTo(this.gpsCaptureMap);
+                    
+                    // Current location marker
+                    this.gpsCaptureMarker = L.marker([latitude, longitude], {icon: L.divIcon({className: 'bg-primary', circle: true})}).addTo(this.gpsCaptureMap);
+                    this.gpsCaptureAccuracyCircle = L.circle([latitude, longitude], {
+                        radius: position.coords.accuracy,
+                        color: '#10b981',
+                        fillColor: '#d1fae5',
+                        fillOpacity: 0.3
+                    }).addTo(this.gpsCaptureMap);
+                    
+                    // Polygon layer
+                    this.gpsCapturePolygon = L.polygon([], {
+                        color: '#2563eb',
+                        fillColor: '#dbeafe',
+                        fillOpacity: 0.5
+                    }).addTo(this.gpsCaptureMap);
+                    
+                    document.getElementById('gpsCaptureAccuracy').textContent = position.coords.accuracy.toFixed(1);
+                },
+                (error) => {
+                    console.error('GPS error:', error);
+                    // Initialize with default location
+                    this.gpsCaptureMap = L.map('gpsCaptureMap').setView([-1.2921, 36.8219], 10);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.gpsCaptureMap);
+                }
+            );
+        }
+    }
+    
+    // Start GPS capture in full screen
+    startGpsCaptureFullScreen() {
+        if (!navigator.geolocation) {
+            this.showToast('GPS not available', 'error');
+            return;
+        }
+        
+        this.gpsCapturePoints = [];
+        
+        document.getElementById('gpsCaptureStartBtn').disabled = true;
+        document.getElementById('gpsCaptureAddBtn').disabled = false;
+        document.getElementById('gpsCaptureStatus').textContent = 'Capturing...';
+        
+        this.gpsCaptureWatchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+                
+                this.gpsCaptureLastPosition = { lat, lon, accuracy };
+                
+                document.getElementById('gpsCaptureAccuracy').textContent = accuracy.toFixed(1);
+                
+                // Update marker
+                if (this.gpsCaptureMarker) {
+                    this.gpsCaptureMarker.setLatLng([lat, lon]);
+                }
+                if (this.gpsCaptureAccuracyCircle) {
+                    this.gpsCaptureAccuracyCircle.setLatLng([lat, lon]).setRadius(accuracy);
+                }
+                
+                this.gpsCaptureMap?.setView([lat, lon], 16);
+            },
+            (error) => {
+                this.showToast('GPS error: ' + error.message, 'error');
+            },
+            { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        );
+    }
+    
+    // Add GPS point in full screen
+    addGpsPointFullScreen() {
+        if (!this.gpsCaptureLastPosition) {
+            this.showToast('No GPS position yet', 'error');
+            return;
+        }
+        
+        this.gpsCapturePoints.push({
+            lat: this.gpsCaptureLastPosition.lat,
+            lon: this.gpsCaptureLastPosition.lon,
+            accuracy: this.gpsCaptureLastPosition.accuracy
+        });
+        
+        document.getElementById('gpsCapturePoints').textContent = this.gpsCapturePoints.length;
+        document.getElementById('gpsCaptureFinishBtn').disabled = this.gpsCapturePoints.length < 3;
+        document.getElementById('gpsCaptureClearBtn').disabled = false;
+        
+        this.updateGpsCapturePolygon();
+    }
+    
+    // Enable manual GPS tap capture
+    enableManualGpsCapture() {
+        if (!this.gpsCaptureMap) return;
+        
+        this.gpsCaptureMap.on('click', (e) => {
+            this.gpsCapturePoints.push({
+                lat: e.latlng.lat,
+                lon: e.latlng.lng,
+                accuracy: 10
+            });
+            
+            document.getElementById('gpsCapturePoints').textContent = this.gpsCapturePoints.length;
+            document.getElementById('gpsCaptureFinishBtn').disabled = this.gpsCapturePoints.length < 3;
+            document.getElementById('gpsCaptureClearBtn').disabled = false;
+            
+            this.updateGpsCapturePolygon();
+        });
+        
+        this.showToast('Tap on map to add points', 'info');
+    }
+    
+    // Update polygon on map
+    updateGpsCapturePolygon() {
+        if (!this.gpsCapturePolygon || this.gpsCapturePoints.length < 3) return;
+        
+        const latlngs = this.gpsCapturePoints.map(p => [p.lat, p.lon]);
+        this.gpsCapturePolygon.setLatLngs(latlngs);
+        this.gpsCaptureMap?.fitBounds(this.gpsCapturePolygon.getBounds(), { padding: [20, 20] });
+    }
+    
+    // Finish GPS capture
+    finishGpsCaptureFullScreen() {
+        this.stopGpsCaptureFullScreen();
+        
+        if (this.gpsCapturePoints.length > 2) {
+            // Close polygon
+            this.gpsCapturePoints.push(this.gpsCapturePoints[0]);
+            this.updateGpsCapturePolygon();
+        }
+        
+        document.getElementById('gpsCaptureStatus').textContent = 'Capture complete';
+    }
+    
+    // Clear GPS points
+    clearGpsCaptureFullScreen() {
+        this.gpsCapturePoints = [];
+        this.updateGpsCapturePolygon();
+        
+        document.getElementById('gpsCapturePoints').textContent = '0';
+        document.getElementById('gpsCaptureFinishBtn').disabled = true;
+        document.getElementById('gpsCaptureClearBtn').disabled = true;
+        document.getElementById('gpsCaptureStatus').textContent = 'Not capturing';
+    }
+    
+    // Stop GPS tracking
+    stopGpsCaptureFullScreen() {
+        if (this.gpsCaptureWatchId) {
+            navigator.geolocation.clearWatch(this.gpsCaptureWatchId);
+            this.gpsCaptureWatchId = null;
+        }
+        document.getElementById('gpsCaptureStartBtn').disabled = false;
+        document.getElementById('gpsCaptureAddBtn').disabled = true;
+    }
+    
+    // Save GPS polygon to farm
+    async saveGpsPolygonToFarm() {
+        if (!this.currentGpsFarmId || this.gpsCapturePoints.length < 4) {
+            this.showToast('Please capture at least 4 points', 'error');
+            return;
+        }
+        
+        const polygonCoords = this.gpsCapturePoints.map(p => [p.lon, p.lat]);
+        
+        const parcelData = {
+            parcel_number: `PTP/${new Date().getFullYear()}/000001`,
+            parcel_name: 'Parcel 1',
+            boundary_geojson: {
+                type: 'Polygon',
+                coordinates: [polygonCoords]
+            },
+            area_hectares: 0, // Calculate from polygon
+            gps_accuracy_meters: Math.max(...this.gpsCapturePoints.map(p => p.accuracy)),
+            mapping_device: 'GPS'
+        };
+        
+        try {
+            await api.addParcel(this.currentGpsFarmId, parcelData);
+            this.showToast('GPS polygon saved to farm!', 'success');
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('gpsCaptureModal'));
+            modal?.hide();
+            
+            // Refresh farm details
+            this.viewFarmDetails(this.currentGpsFarmId);
+        } catch (error) {
+            console.error('Error saving GPS:', error);
+            this.showToast('Failed to save GPS polygon', 'error');
+        }
+    }
+    
+    // Pre-fill farm form from user registration data
+    prefillFarmFormFromUser() {
+        const user = this.currentUser;
+        if (!user) return;
+        
+        // Fill farmer identity from registration
+        const fullName = document.getElementById('farmerFullName');
+        const phone = document.getElementById('farmerPhone');
+        const nationalId = document.getElementById('farmerNationalId');
+        const gender = document.getElementById('farmerGender');
+        
+        if (fullName && user.first_name) {
+            fullName.value = `${user.first_name} ${user.last_name || ''}`.trim();
+        }
+        if (phone && user.phone) {
+            phone.value = user.phone;
+        }
+        if (nationalId && user.national_id) {
+            nationalId.value = user.national_id;
+        }
+        if (gender && user.gender) {
+            gender.value = user.gender;
+        }
+        
+        // Get membership number from cooperative membership
+        this.loadMembershipNumber();
+    }
+    
+    async loadMembershipNumber() {
+        try {
+            const response = await api.getUserProfile();
+            if (response && response.membership_number) {
+                document.getElementById('membershipNumber').value = response.membership_number;
+            } else if (response && response.cooperative_memberships && response.cooperative_memberships.length > 0) {
+                const membership = response.cooperative_memberships[0];
+                document.getElementById('membershipNumber').value = membership.membership_number || '';
+            }
+        } catch (e) {
+            console.log('Could not load membership number:', e);
+        }
+    }
+    
+    // Setup Tab 1 validation - check required fields (GPS now optional)
+    setupTabValidation() {
+        const requiredFields = [
+            'farmerFullName', 'farmerPhone', 'farmerNationalId', 'farmerGender',
+            'membershipNumber', 'dataConsent', 'farmName', 'farmLocation',
+            'farmArea', 'landOwnershipType', 'coffeeVariety', 'estimatedYield', 'farmingMethod'
+        ];
+        
+        const checkTab1Complete = () => {
+            let allComplete = true;
+            
+            // Check required fields only (GPS now optional)
+            for (const fieldId of requiredFields) {
+                const field = document.getElementById(fieldId);
+                if (!field || !field.value.trim()) {
+                    allComplete = false;
+                    field?.classList.add('is-invalid');
+                } else {
+                    field?.classList.remove('is-invalid');
+                }
+            }
+            
+            // GPS polygon is OPTIONAL - just show status
+            const hasPolygon = this.gpsPoints && this.gpsPoints.length >= 4;
+            const statusEl = document.getElementById('polygonStatus');
+            if (statusEl) {
+                if (hasPolygon) {
+                    statusEl.className = 'badge bg-success';
+                    statusEl.textContent = 'Polygon captured';
+                } else {
+                    statusEl.className = 'badge bg-secondary';
+                    statusEl.textContent = 'No polygon (optional)';
+                }
+            }
+            
+            // Enable submit button (GPS not required)
+            const submitBtn = document.getElementById('submitTab1');
+            if (submitBtn) {
+                submitBtn.disabled = !allComplete;
+            }
+            
+            return allComplete;
+        };
+        
+        // Add event listeners to all required fields
+        requiredFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', checkTab1Complete);
+                field.addEventListener('change', checkTab1Complete);
+            }
+        });
+        
+        // Check polygon completion when GPS capture finishes
+        const originalFinishCapture = this.finishGPSCapture;
+        this.finishGPSCapture = async () => {
+            await originalFinishCapture?.call(this);
+            checkTab1Complete();
+        };
+    }
+    
+    // Submit Tab 1 - Basic Information (Required - GPS optional)
+    async submitTab1Basic() {
+        const requiredFields = [
+            'farmerFullName', 'farmerPhone', 'farmerNationalId', 'farmerGender',
+            'membershipNumber', 'dataConsent', 'farmName', 'farmLocation',
+            'farmArea', 'landOwnershipType', 'coffeeVariety', 'estimatedYield', 'farmingMethod'
+        ];
+        
+        // Validate all fields
+        let isValid = true;
+        for (const fieldId of requiredFields) {
+            const field = document.getElementById(fieldId);
+            if (!field || !field.value.trim()) {
+                field?.classList.add('is-invalid');
+                isValid = false;
+            }
+        }
+        
+        // GPS polygon is now OPTIONAL - user can capture later
+        const hasPolygon = this.gpsPoints && this.gpsPoints.length >= 4;
+        
+        if (!isValid) {
+            this.showToast('Please fill all required fields', 'error');
+            return;
+        }
+        
+        // Build basic farm data (GPS optional)
+        const farmData = await this.buildFarmDataFromForm('basic', hasPolygon);
+        
+        try {
+            // Create farm with basic info (with or without polygon)
+            const result = await api.createFarm(farmData);
+            
+            // Store farm ID for later GPS capture
+            this.lastCreatedFarmId = result.id;
+            
+            if (hasPolygon) {
+                this.showToast('Farm created with GPS polygon! You can now add advanced details.', 'success');
+            } else {
+                this.showToast('Farm created! GPS polygon can be captured later.', 'success');
+                // Show GPS capture section prominently
+                document.getElementById('panel-basic')?.classList.add('highlight-gps');
+            }
+            
+            // Show capture later option
+            document.getElementById('captureLaterBtn')?.classList.remove('d-none');
+            document.getElementById('captureNowBtn')?.classList.add('d-none');
+            
+            // Switch to Advanced tab
+            document.getElementById('tab-advanced')?.click();
+            document.getElementById('submitTab1').style.display = 'none';
+            document.getElementById('submitFullForm').style.display = 'inline-block';
+            
+            // Show completeness prompt
+            document.getElementById('completenessAlert').classList.remove('d-none');
+            
+            // Reload farms list if on farms page
+            if (this.currentPage === 'farms') {
+                this.loadPage('farms');
+            }
+        } catch (error) {
+            console.error('Failed to create farm:', error);
+            this.showToast(error.message || 'Failed to create farm', 'error');
+        }
+    }
+    
+    // Capture GPS later - add polygon to existing farm
+    async captureGPSLater() {
+        if (!this.lastCreatedFarmId) {
+            this.showToast('No farm to update. Please create a farm first.', 'error');
+            return;
+        }
+        
+        if (!this.gpsPoints || this.gpsPoints.length < 4) {
+            this.showToast('Please capture GPS polygon with minimum 4 points first', 'error');
+            return;
+        }
+        
+        const polygonCoords = this.gpsPoints.map(point => [point.lon, point.lat]);
+        const farmArea = parseFloat(document.getElementById('farmArea')?.value) || 0;
+        
+        const parcelData = {
+            parcel_number: `PTP/${new Date().getFullYear()}/000001`,
+            parcel_name: document.getElementById('farmName')?.value || 'Parcel 1',
+            boundary_geojson: {
+                type: 'Polygon',
+                coordinates: [polygonCoords]
+            },
+            area_hectares: farmArea,
+            gps_accuracy_meters: Math.max(...this.gpsPoints.map(point => point.accuracy)),
+            mapping_device: 'GPS'
+        };
+        
+        try {
+            // Add parcel to existing farm
+            await api.addParcel(this.lastCreatedFarmId, parcelData);
+            this.showToast('GPS polygon added to farm!', 'success');
+            
+            // Update UI
+            document.getElementById('polygonStatus').className = 'badge bg-success';
+            document.getElementById('polygonStatus').textContent = 'Polygon captured';
+            
+            // Hide capture later buttons
+            document.getElementById('captureLaterBtn')?.classList.add('d-none');
+            
+            // Reload farms
+            if (this.currentPage === 'farms') {
+                this.loadPage('farms');
+            }
+        } catch (error) {
+            console.error('Failed to add GPS polygon:', error);
+            this.showToast(error.message || 'Failed to add GPS polygon', 'error');
+        }
+    }
+    
+    // Submit Tab 2 - Advanced Information (Optional)
+    async submitTab2Advanced() {
+        // Build full farm data including advanced fields
+        const farmData = await this.buildFarmDataFromForm('full');
+        
+        try {
+            // Update farm with advanced info
+            const result = await api.updateFarm(farmData.id, farmData);
+            this.showToast('Advanced details added successfully!', 'success');
+            
+            // Update completeness progress
+            this.updateCompletenessProgress();
+            
+            // Reload farms list
+            if (this.currentPage === 'farms') {
+                this.loadPage('farms');
+            }
+        } catch (error) {
+            console.error('Failed to update farm:', error);
+            this.showToast(error.message || 'Failed to add advanced details', 'error');
+        }
+    }
+    
+    // Build farm data from form based on mode (basic or full)
+    async buildFarmDataFromForm(mode = 'basic') {
+        const getMultiSelectValues = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return [];
+            return Array.from(el.selectedOptions).map(opt => opt.value);
+        };
+        
+        const getCheckboxValues = (prefix) => {
+            const checkboxes = document.querySelectorAll(`input[id^="${prefix}"]:checked`);
+            return Array.from(checkboxes).map(cb => cb.value);
+        };
+        
+        const farmArea = parseFloat(document.getElementById('farmArea')?.value) || 0;
+        
+        // GPS polygon data
+        let parcels = [];
+        if (this.gpsPoints && this.gpsPoints.length > 3) {
+            const polygonCoords = this.gpsPoints.map(point => [point.lon, point.lat]);
+            parcels = [{
+                parcel_number: document.getElementById('parcelId')?.value || `PTP/${new Date().getFullYear()}/000001`,
+                parcel_name: document.getElementById('farmName')?.value || 'Parcel 1',
+                boundary_geojson: {
+                    type: 'Polygon',
+                    coordinates: [polygonCoords]
+                },
+                area_hectares: farmArea,
+                gps_accuracy_meters: Math.max(...this.gpsPoints.map(point => point.accuracy)),
+                mapping_device: 'GPS',
+                // Basic fields
+                land_use_type: document.getElementById('farmingMethod')?.value || 'monocrop',
+                ownership_type: document.getElementById('landOwnershipType')?.value,
+                
+                // Advanced fields (Tab 2)
+                ...(mode === 'full' ? {
+                    parent_parcel_id: document.getElementById('parentParcel')?.value || null,
+                    agroforestry_start_year: parseInt(document.getElementById('agroforestryStartYear')?.value) || null,
+                    estimated_coffee_plants: parseInt(document.getElementById('coffeePlants')?.value) || null,
+                    previous_land_use: document.getElementById('previousLandUse')?.value || null,
+                    certifications: getMultiSelectValues('certificationStatus'),
+                    other_crops: getMultiSelectValues('intercroppedSpecies'),
+                    shade_tree_count: document.getElementById('shadeTrees')?.value === 'yes' ? 
+                        parseInt(document.getElementById('canopyCover')?.value) || 0 : 0,
+                } : {})
+            }];
+        }
+        
+        const farmData = {
+            farm_name: document.getElementById('farmName')?.value,
+            total_area_hectares: farmArea,
+            ownership_type: document.getElementById('landOwnershipType')?.value,
+            coffee_varieties: [document.getElementById('coffeeVariety')?.value].filter(Boolean),
+            average_annual_production_kg: parseFloat(document.getElementById('estimatedYield')?.value) || null,
+            land_use_type: document.getElementById('farmingMethod')?.value || 'monocrop',
+            
+            // Farmer identity for Tab 1
+            farmer_name: document.getElementById('farmerFullName')?.value,
+            farmer_phone: document.getElementById('farmerPhone')?.value,
+            farmer_national_id: document.getElementById('farmerNationalId')?.value,
+            farmer_gender: document.getElementById('farmerGender')?.value,
+            membership_number: document.getElementById('membershipNumber')?.value,
+            farm_location: document.getElementById('farmLocation')?.value,
+            
+            centroid_lat: this.gpsPoints ? this.gpsPoints.reduce((sum, p) => sum + p.lat, 0) / this.gpsPoints.length : null,
+            centroid_lon: this.gpsPoints ? this.gpsPoints.reduce((sum, p) => sum + p.lon, 0) / this.gpsPoints.length : null,
+            parcels: parcels
+        };
+        
+        // Add Tab 2 fields if full mode
+        if (mode === 'full') {
+            farmData.agroforestry_start_year = parseInt(document.getElementById('agroforestryStartYear')?.value) || null;
+            farmData.farm_established_year = parseInt(document.getElementById('farmEstablishedYear')?.value) || null;
+            farmData.previous_land_use = document.getElementById('previousLandUse')?.value;
+            farmData.certification_status = getMultiSelectValues('certificationStatus');
+            farmData.programme_support = document.getElementById('ngoSupport')?.value ? {
+                name: document.getElementById('ngoSupport')?.value,
+                years: document.getElementById('ngoYears')?.value
+            } : null;
+        }
+        
+        return farmData;
+    }
+    
+    // Update completeness progress for Tab 2
+    updateCompletenessProgress() {
+        const advancedFields = [
+            'landDocument', 'parentParcel', 'intercroppedSpecies', 'shadeTrees',
+            'coffeePlants', 'agroforestryStartYear', 'pruningDate', 'harvestDate',
+            'plantingDate', 'practicePhoto', 'farmEstablishedYear', 'previousLandUse',
+            'certificationStatus', 'ngoSupport'
+        ];
+        
+        let filledCount = 0;
+        advancedFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field && field.value && field.value.length > 0) {
+                filledCount++;
+            }
+        });
+        
+        const percentage = Math.round((filledCount / advancedFields.length) * 100);
+        
+        const bar = document.getElementById('completenessBar');
+        const alert = document.getElementById('completenessAlert');
+        
+        if (bar) {
+            bar.style.width = `${percentage}%`;
+            bar.textContent = `${percentage}%`;
+        }
+        
+        // Hide alert if >= 60%
+        if (alert && percentage >= 60) {
+            alert.classList.add('d-none');
         }
     }
     
@@ -6294,6 +6910,11 @@ class PlotraDashboard {
         document.getElementById('finishCaptureBtn').disabled = true;
         document.getElementById('clearPointsBtn').disabled = false;
         document.getElementById('captureInstructions').textContent = 'Capture complete! You can clear and re-capture if needed.';
+        
+        // Show save polygon button if farm was already created
+        if (this.lastCreatedFarmId && this.gpsPoints.length >= 4) {
+            document.getElementById('captureLaterBtn')?.classList.remove('d-none');
+        }
     }
 
     stopGPSCapture() {
@@ -8309,6 +8930,9 @@ class PlotraDashboard {
     }
 
     async viewFarmDetails(farmId) {
+        // Store the current farm ID for GPS capture
+        this.currentViewFarmId = farmId;
+        
         try {
             // Fetch farm data first
             const farmsResponse = await api.getFarms();
@@ -8322,7 +8946,7 @@ class PlotraDashboard {
             
             const parcels = await api.getParcels(farmId);
 
-            const modal = new bootstrap.Modal(document.getElementById('farmDetailsModal'));
+            const modal = new bootstrap.Modal(document.getElementById('viewFarmModal'));
             const content = document.getElementById('farmDetailsContent');
 
             content.innerHTML = `

@@ -290,6 +290,14 @@ Attempted URL: ${url}`;
         });
     }
     
+    async updateFarm(farmId, data) {
+        console.log('Updating farm:', farmId, data);
+        return this.request(`/farmer/farm/${farmId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    }
+    
     // Parcels
     async getParcels(farmId) {
         return this.request(`/farmer/farm/${farmId}/parcels`, { optional: true, default: [] });

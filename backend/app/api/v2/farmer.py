@@ -17,7 +17,7 @@ from app.models.traceability import Delivery
 from app.models.payments import PaymentEscrow, PayoutStatus
 from app.api.schemas import (
     UserCreate, UserResponse, UserUpdate,
-    FarmCreate, FarmResponse, ParcelCreate, ParcelResponse,
+    FarmCreate, FarmUpdate, FarmResponse, ParcelCreate, ParcelResponse,
     DocumentUpload, DocumentResponse, DeliveryResponse, MessageResponse
 )
 
@@ -228,6 +228,62 @@ async def create_farm(
     )
     farm = result.scalar_one()
 
+    return farm
+
+
+@router.put("/farm/{farm_id}", response_model=FarmResponse)
+async def update_farm(
+    farm_id: str,
+    farm_data: FarmUpdate,
+    current_user: User = Depends(require_farmer),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update an existing farm with advanced information.
+    Tab 2 fields - all optional.
+    """
+    from app.models.farm import LandParcel
+    
+    result = await db.execute(
+        select(Farm)
+        .where(Farm.id == farm_id, Farm.owner_id == current_user.id, Farm.deleted_at == None)
+        .options(selectinload(Farm.parcels))
+    )
+    farm = result.scalar_one_or_none()
+    
+    if not farm:
+        raise HTTPException(status_code=404, detail="Farm not found")
+    
+    update_data = farm_data.model_dump(exclude_unset=True)
+    
+    if 'parcels' in update_data:
+        parcels_data = update_data.pop('parcels')
+        
+        if parcels_data and farm.parcels:
+            parcel = farm.parcels[0]
+            
+            if 'agroforestry_start_year' in update_data:
+                parcel.agroforestry_start_year = update_data.get('agroforestry_start_year')
+            if 'farm_established_year' in update_data:
+                parcel.year_coffee_first_planted = update_data.get('farm_established_year')
+            if 'previous_land_use' in update_data:
+                parcel.previous_land_use = update_data.get('previous_land_use')
+            if 'certification_status' in update_data:
+                parcel.certifications = update_data.get('certification_status')
+            if 'programme_support' in update_data:
+                parcel.programme_support = update_data.get('programme_support')
+            if 'other_crops' in update_data:
+                parcel.other_crops = update_data.get('other_crops')
+            if 'estimated_coffee_plants' in update_data:
+                parcel.estimated_coffee_plants = update_data.get('estimated_coffee_plants')
+    
+    for field, value in update_data.items():
+        if hasattr(farm, field) and field != 'parcels':
+            setattr(farm, field, value)
+    
+    await db.commit()
+    await db.refresh(farm)
+    
     return farm
 
 

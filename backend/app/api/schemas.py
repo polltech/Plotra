@@ -166,6 +166,7 @@ class UserCreate(BaseModel):
     payout_recipient_id: Optional[str] = None
     payout_bank_name: Optional[str] = None
     payout_account_number: Optional[str] = None
+    consent: Optional[bool] = False  # Data consent checkbox
 
 
 class UserUpdate(BaseModel):
@@ -191,6 +192,11 @@ class UserResponse(BaseModel):
     country: str
     county: Optional[str]
     created_at: datetime
+    # Hard stop fields for farm registration
+    gender: Optional[str] = None
+    payout_recipient_id: Optional[str] = None
+    consent_timestamp: Optional[datetime] = None
+    national_id: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -309,6 +315,14 @@ class FarmCreate(BaseModel):
     estimated_annual_yield_kg: Optional[float] = None
     coffee_area_percentage: Optional[int] = 100
     
+    # Tab 1: Farmer Identity
+    farmer_name: Optional[str] = None
+    farmer_phone: Optional[str] = None
+    farmer_national_id: Optional[str] = None
+    farmer_gender: Optional[str] = None
+    membership_number: Optional[str] = None
+    farm_location: Optional[str] = None
+    
     # EUDR Mixed Farming Declaration
     practice_mixed_farming: Optional[bool] = False
     other_crops: List[str] = []
@@ -338,11 +352,39 @@ class FarmCreate(BaseModel):
     cooperative_name: Optional[str] = None
     cooperative_registration_number: Optional[str] = None
     
+    # Tab 2: Advanced Fields
+    agroforestry_start_year: Optional[int] = None
+    farm_established_year: Optional[int] = None
+    previous_land_use: Optional[str] = None
+    certification_status: Optional[List[str]] = None
+    programme_support: Optional[dict] = None
+    
     # Location
     centroid_lat: Optional[float] = None
     centroid_lon: Optional[float] = None
     
     parcels: List[ParcelCreate] = []
+
+
+class FarmUpdate(BaseModel):
+    """Schema for updating farm with advanced (Tab 2) information"""
+    farm_name: Optional[str] = None
+    total_area_hectares: Optional[float] = None
+    coffee_varieties: Optional[List[str]] = None
+    average_annual_production_kg: Optional[float] = None
+    land_use_type: Optional[str] = None
+    ownership_type: Optional[str] = None
+    
+    # Tab 2: Advanced fields
+    agroforestry_start_year: Optional[int] = None
+    farm_established_year: Optional[int] = None
+    previous_land_use: Optional[str] = None
+    certification_status: Optional[List[str]] = None
+    programme_support: Optional[dict] = None
+    other_crops: Optional[List[str]] = None
+    estimated_coffee_plants: Optional[int] = None
+    
+    parcels: Optional[List[ParcelCreate]] = None
 
 
 class FarmResponse(BaseModel):

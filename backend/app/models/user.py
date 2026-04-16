@@ -101,6 +101,11 @@ class User(BaseModel):
     date_of_birth = Column(DateTime, nullable=True)
     national_id = Column(String(50), nullable=True, unique=True)
     
+    # Hard stop fields (per Terms of Reference)
+    gender = Column(String(10), nullable=True)  # M/F/Other - for Phase 2 incentive rules
+    payout_recipient_id = Column(String(50), nullable=True)  # M-Pesa number - for Phase 2 payment flows
+    consent_timestamp = Column(DateTime, nullable=True)  # Data consent timestamp (ISO 8601)
+    
     # Role and permissions
     role = Column(
         Enum(

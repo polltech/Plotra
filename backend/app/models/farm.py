@@ -338,6 +338,14 @@ class LandParcel(GeoModel):
     canopy_density = Column(Float, nullable=True)
     biomass_tons = Column(Float, nullable=True)
     
+    # Heritage score (Hard stop - NDVI slope 2015-2020 for Phase 2)
+    heritage_score = Column(Float, nullable=True)
+    agroforestry_start_year = Column(Integer, nullable=True)
+    
+    # Farm history for satellite interpretation
+    previous_land_use = Column(String(50), nullable=True)  # Forest/Pasture/Cropland/Other
+    programme_support = Column(JSON, nullable=True)  # NGO programme support
+    
     # Verification workflow
     verification_status = Column(Enum(VerificationStatus), default=VerificationStatus.DRAFT)
     
