@@ -3230,7 +3230,13 @@ class PlotraDashboard {
     }
 
     async renderFarmerDashboard(content) {
+        console.log('Rendering Farmer Dashboard...');
+        if (!content) {
+            console.error('Content element is null!');
+            return;
+        }
         try {
+            console.log('Fetching farmer data...');
             const [farmsResponse, deliveries, stats] = await Promise.all([
                 api.getFarms(),
                 api.getDeliveries(),
