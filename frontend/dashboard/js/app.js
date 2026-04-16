@@ -1673,6 +1673,10 @@ class PlotraDashboard {
             gender.value = user.gender;
         }
         
+        // Generate farm number (membership number)
+        this.generateFarmNumber();
+    }
+        
         // Get membership number from cooperative membership
         this.loadMembershipNumber();
     }
@@ -6215,13 +6219,56 @@ class PlotraDashboard {
         }
     }
     
-    async generateParcelId() {
+async generateParcelId() {
         const year = new Date().getFullYear();
         const parcelIdInput = document.getElementById('parcelId');
         if (!parcelIdInput) {
-            // Parcel ID input not in new form - backend generates it
+            // New form - generate farm number instead
+            await this.generateFarmNumber();
             return;
         }
+        
+        try {
+            // Get farm count to generate sequential number
+            const farms = await api.getFarms();
+            const farmCount = farms && farms.length > 0 ? farms.length + 1 : 1;
+            const parcelNumber = String(farmCount).padStart(3, '0');
+            const parcelId = `PTP\\${year}\\${parcelNumber}`;
+            parcelIdInput.value = parcelId;
+            console.log('Generated Parcel ID:', parcelId);
+        } catch (error) {
+            // Fallback to random number if API fails
+            const fallbackId = `PTP\\${year}\\${Math.floor(Math.random() * 999).toString().padStart(3, '0')}`;
+            parcelIdInput.value = fallbackId;
+        }
+    }
+    
+    async generateFarmNumber() {
+        // Generate farm number (PCF/YEAR/XXXX) for new form
+        const membershipInput = document.getElementById('membershipNumber');
+        if (!membershipInput) return;
+        
+        // If membership number already set, use it as farm number
+        if (membershipInput.value) return;
+        
+        try {
+            const user = await api.getCurrentUser();
+            if (user && user.cooperative_memberships && user.cooperative_memberships.length > 0) {
+                membershipInput.value = user.cooperative_memberships[0].membership_number || '';
+            } else {
+                // Generate new farm number if no membership
+                const farms = await api.getFarms();
+                const farmCount = farms && farms.length > 0 ? farms.length + 1 : 1;
+                const year = new Date().getFullYear();
+                membershipInput.value = `PCF/${year}/${String(farmCount).padStart(4, '0')}`;
+            }
+        } catch (e) {
+            console.log('Could not generate farm number:', e);
+            // Fallback
+            const year = new Date().getFullYear();
+            membershipInput.value = `PCF/${year}/0001`;
+        }
+    }
         
         try {
             // Get farm count to generate sequential number
