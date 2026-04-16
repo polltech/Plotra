@@ -1679,7 +1679,7 @@ class PlotraDashboard {
     
     async loadMembershipNumber() {
         try {
-            const response = await api.getUserProfile();
+            const response = await api.getCurrentUser();
             if (response && response.membership_number) {
                 document.getElementById('membershipNumber').value = response.membership_number;
             } else if (response && response.cooperative_memberships && response.cooperative_memberships.length > 0) {
@@ -6219,7 +6219,7 @@ class PlotraDashboard {
         const year = new Date().getFullYear();
         const parcelIdInput = document.getElementById('parcelId');
         if (!parcelIdInput) {
-            console.error('Parcel ID input not found');
+            // Parcel ID input not in new form - backend generates it
             return;
         }
         
