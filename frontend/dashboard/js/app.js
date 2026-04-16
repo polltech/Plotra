@@ -3444,6 +3444,18 @@ class PlotraDashboard {
         }
         
         console.log('Dashboard HTML set, length:', content.innerHTML.length);
+        
+        // Force visibility
+        setTimeout(() => {
+            const pc = document.getElementById('pageContent');
+            if (pc) {
+                pc.style.display = 'block';
+                pc.style.visibility = 'visible';
+                pc.style.opacity = '1';
+                pc.style.minHeight = '500px';
+                console.log('Forced pageContent visibility');
+            }
+        }, 200);
     }
 
     initFarmerDashboardCharts(deliveries) {
