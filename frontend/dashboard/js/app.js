@@ -1673,26 +1673,8 @@ class PlotraDashboard {
             gender.value = user.gender;
         }
         
-        // Generate farm number (membership number)
-        this.generateFarmNumber();
-    }
-        
-        // Get membership number from cooperative membership
-        this.loadMembershipNumber();
-    }
-    
-    async loadMembershipNumber() {
-        try {
-            const response = await api.getCurrentUser();
-            if (response && response.membership_number) {
-                document.getElementById('membershipNumber').value = response.membership_number;
-            } else if (response && response.cooperative_memberships && response.cooperative_memberships.length > 0) {
-                const membership = response.cooperative_memberships[0];
-                document.getElementById('membershipNumber').value = membership.membership_number || '';
-            }
-        } catch (e) {
-            console.log('Could not load membership number:', e);
-        }
+        // Generate parcel ID (PTP/YEAR/XXXX)
+        this.generateParcelId();
     }
     
     // Setup Tab 1 validation - check required fields (GPS now optional)
@@ -6222,23 +6204,19 @@ class PlotraDashboard {
 async generateParcelId() {
         const year = new Date().getFullYear();
         const parcelIdInput = document.getElementById('parcelId');
-        if (!parcelIdInput) {
-            // New form - generate farm number instead
-            await this.generateFarmNumber();
-            return;
-        }
+        if (!parcelIdInput) return;
         
         try {
-            // Get farm count to generate sequential number
+            // Get farm count to generate sequential number (4 digits)
             const farms = await api.getFarms();
             const farmCount = farms && farms.length > 0 ? farms.length + 1 : 1;
-            const parcelNumber = String(farmCount).padStart(3, '0');
-            const parcelId = `PTP\\${year}\\${parcelNumber}`;
+            const parcelNumber = String(farmCount).padStart(4, '0');
+            const parcelId = `PTP/${year}/${parcelNumber}`;
             parcelIdInput.value = parcelId;
             console.log('Generated Parcel ID:', parcelId);
         } catch (error) {
             // Fallback to random number if API fails
-            const fallbackId = `PTP\\${year}\\${Math.floor(Math.random() * 999).toString().padStart(3, '0')}`;
+            const fallbackId = `PTP/${year}/${Math.floor(Math.random() * 9999).toString().padStart(4, '0')}`;
             parcelIdInput.value = fallbackId;
         }
     }
@@ -6267,26 +6245,7 @@ async generateParcelId() {
             // Fallback
             const year = new Date().getFullYear();
             membershipInput.value = `PCF/${year}/0001`;
-        }
-    }
-        
-        try {
-            // Get farm count to generate sequential number
-            const farms = await api.getFarms();
-            const farmCount = farms && farms.length > 0 ? farms.length + 1 : 1;
-            const parcelNumber = String(farmCount).padStart(3, '0');
-            const parcelId = `PTP\\${year}\\${parcelNumber}`;
-            parcelIdInput.value = parcelId;
-            console.log('Generated Parcel ID:', parcelId);
-        } catch (error) {
-            // Fallback to random number if API fails
-            console.warn('API failed, using fallback:', error);
-            const farmCount = Math.floor(Math.random() * 999) + 1;
-            const parcelNumber = String(farmCount).padStart(3, '0');
-            const parcelId = `PTP\\${year}\\${parcelNumber}`;
-            parcelIdInput.value = parcelId;
-            console.log('Generated Parcel ID (fallback):', parcelId);
-        }
+}
     }
 
     async loadSystemConfig(content) {
