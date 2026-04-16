@@ -1737,11 +1737,22 @@ class PlotraDashboard {
             // Check required fields only (GPS now optional)
             for (const fieldId of requiredFields) {
                 const field = document.getElementById(fieldId);
-                if (!field || !field.value.trim()) {
-                    allComplete = false;
-                    field?.classList.add('is-invalid');
+                if (!field) continue;
+                
+                let isFieldValid = true;
+                
+                // Handle checkboxes separately
+                if (field.type === 'checkbox') {
+                    isFieldValid = field.checked;
                 } else {
-                    field?.classList.remove('is-invalid');
+                    isFieldValid = field.value.trim() !== '';
+                }
+                
+                if (!isFieldValid) {
+                    allComplete = false;
+                    field.classList.add('is-invalid');
+                } else {
+                    field.classList.remove('is-invalid');
                 }
             }
             
@@ -1796,9 +1807,20 @@ class PlotraDashboard {
         let isValid = true;
         for (const fieldId of requiredFields) {
             const field = document.getElementById(fieldId);
-            if (!field || !field.value.trim()) {
-                field?.classList.add('is-invalid');
+            if (!field) continue;
+            
+            let isFieldValid = true;
+            if (field.type === 'checkbox') {
+                isFieldValid = field.checked;
+            } else {
+                isFieldValid = field.value.trim() !== '';
+            }
+            
+            if (!isFieldValid) {
+                field.classList.add('is-invalid');
                 isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
             }
         }
         
