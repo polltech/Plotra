@@ -1457,6 +1457,10 @@ class PlotraDashboard {
                 document.getElementById('submitTab1')?.addEventListener('click', () => this.submitTab1Basic());
                 document.getElementById('submitTab2')?.addEventListener('click', () => this.submitTab2Advanced());
                 
+                // Step wizard create buttons
+                document.getElementById('createFarmBtn')?.addEventListener('click', () => this.submitTab1Basic());
+                document.getElementById('createFarmWithAdvancedBtn')?.addEventListener('click', () => this.submitTab1Basic());
+                
                 // GPS Capture button in view modal
                 document.getElementById('openGpsCaptureBtn')?.addEventListener('click', () => this.openFullScreenGpsCapture());
                 
@@ -1464,6 +1468,81 @@ class PlotraDashboard {
                 this.setupFullScreenGpsCapture();
             }
         }
+    }
+
+    // Step Wizard Navigation for Add Farm
+    goToFarmStep(step) {
+        const totalSteps = 5;
+        const stepTabs = document.querySelectorAll('.step-item');
+        const stepPanes = document.querySelectorAll('.step-pane');
+        const progressBar = document.getElementById('farmStepProgress');
+        
+        if (step < 1 || step > totalSteps) return;
+        
+        // Update step tabs
+        stepTabs.forEach((tab, index) => {
+            const tabStep = index + 1;
+            tab.classList.remove('active', 'completed');
+            if (tabStep === step) {
+                tab.classList.add('active');
+            } else if (tabStep < step) {
+                tab.classList.add('completed');
+            }
+        });
+        
+        // Update step panes
+        stepPanes.forEach((pane) => {
+            pane.classList.remove('active');
+            if (parseInt(pane.dataset.step) === step) {
+                pane.classList.add('active');
+            }
+        });
+        
+        // Update progress bar
+        if (progressBar) {
+            const percent = ((step - 1) / (totalSteps - 1)) * 100;
+            progressBar.style.width = percent + '%';
+        }
+        
+        // If going to review step (4), populate review data
+        if (step === 4) {
+            this.populateFarmReview();
+        }
+        
+        // Scroll to top of form
+        const modalBody = document.querySelector('#addFarmModal .modal-body');
+        if (modalBody) modalBody.scrollTop = 0;
+    }
+
+    // Populate review data before create
+    populateFarmReview() {
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value : '-';
+        };
+        
+        document.getElementById('reviewFarmer').innerHTML = `
+            <div class="col-md-6"><strong>Name:</strong> ${getVal('farmerFullName')}</div>
+            <div class="col-md-6"><strong>Phone:</strong> ${getVal('farmerPhone')}</div>
+            <div class="col-md-6"><strong>National ID:</strong> ${getVal('farmerNationalId')}</div>
+            <div class="col-md-6"><strong>Gender:</strong> ${getVal('farmerGender')}</div>
+            <div class="col-md-6"><strong>Membership:</strong> ${getVal('membershipNumber')}</div>
+        `;
+        
+        document.getElementById('reviewFarm').innerHTML = `
+            <div class="col-md-6"><strong>Parcel ID:</strong> ${getVal('parcelId')}</div>
+            <div class="col-md-6"><strong>Farm Name:</strong> ${getVal('farmName')}</div>
+            <div class="col-md-6"><strong>Location:</strong> ${getVal('farmLocation')}</div>
+            <div class="col-md-6"><strong>Size:</strong> ${getVal('farmArea')} ha</div>
+            <div class="col-md-6"><strong>Ownership:</strong> ${getVal('landOwnershipType')}</div>
+        `;
+        
+        document.getElementById('reviewCoffee').innerHTML = `
+            <div class="col-md-6"><strong>Variety:</strong> ${getVal('coffeeVariety')}</div>
+            <div class="col-md-6"><strong>Yield:</strong> ${getVal('estimatedYield')} kg</div>
+            <div class="col-md-6"><strong>Method:</strong> ${getVal('farmingMethod')}</div>
+            <div class="col-md-6"><strong>GPS:</strong> ${this.gpsPoints?.length >= 4 ? 'Captured' : 'Not captured (optional)'}</div>
+        `;
     }
     
     // Setup full screen GPS capture modal
