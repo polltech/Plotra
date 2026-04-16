@@ -1799,7 +1799,7 @@ class PlotraDashboard {
     async submitTab1Basic() {
         const requiredFields = [
             'farmerFullName', 'farmerPhone', 'farmerNationalId', 'farmerGender',
-            'membershipNumber', 'dataConsent', 'farmName', 'farmLocation',
+            'dataConsent', 'parcelId', 'farmName', 'farmLocation',
             'farmArea', 'landOwnershipType', 'coffeeVariety', 'estimatedYield', 'farmingMethod'
         ];
         
