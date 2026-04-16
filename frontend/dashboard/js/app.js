@@ -1472,7 +1472,7 @@ class PlotraDashboard {
 
     // Step Wizard Navigation for Add Farm
     goToFarmStep(step) {
-        const totalSteps = 5;
+        const totalSteps = 6;
         const stepTabs = document.querySelectorAll('.step-item');
         const stepPanes = document.querySelectorAll('.step-pane');
         const progressBar = document.getElementById('farmStepProgress');
@@ -1504,8 +1504,8 @@ class PlotraDashboard {
             progressBar.style.width = percent + '%';
         }
         
-        // If going to review step (4), populate review data
-        if (step === 4) {
+        // If going to review step (5), populate review data
+        if (step === 5) {
             this.populateFarmReview();
         }
         
