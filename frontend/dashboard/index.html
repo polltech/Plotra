@@ -2161,6 +2161,11 @@
                             <div class="mb-3">
                                 <input type="text" class="form-control" id="regIdNumber" name="id_number" placeholder="ID Number">
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label">Passport Photo (Optional)</label>
+                                <input type="file" class="form-control" id="regPassportPhoto" name="passport_photo" accept="image/*">
+                                <small class="text-muted">Upload your passport photo for verification</small>
+                            </div>
                             <div class="d-flex justify-content-center mt-4">
                                 <button type="button" class="btn btn-primary px-4 py-2" id="btnNextReg3" style="min-width: 120px;">Next</button>
                             </div>
@@ -2335,6 +2340,11 @@
                                         <div class="col-md-4">
                                             <label class="form-label">National ID Number *</label>
                                             <input type="text" class="form-control" id="farmerNationalId" required placeholder="ID number (SHA-256 stored)">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Passport Photo</label>
+                                            <input type="file" class="form-control" id="farmerPassportPhoto" accept="image/*">
+                                            <small class="text-muted">Upload passport-style photo</small>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label">Gender *</label>
@@ -3282,7 +3292,8 @@
                     <!-- User Profile -->
                     <div class="user-profile" id="userProfile" style="display: none; padding: 1rem; border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 1rem;">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="user-avatar" id="userAvatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">U</div>
+                            <img class="user-avatar" id="userAvatar" src="" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: none;">
+                            <div class="user-avatar" id="userAvatarInitials" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">U</div>
                             <div class="user-info flex-grow-1">
                                 <div class="user-name" id="userName" style="font-weight: bold; font-size: 0.875rem;">User Name</div>
                                 <div class="user-role" id="userRoleDisplay" style="font-size: 0.75rem; color: #6c757d;">Farmer</div>

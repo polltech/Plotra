@@ -100,6 +100,7 @@ class User(BaseModel):
     last_name = Column(String(100), nullable=False)
     date_of_birth = Column(DateTime, nullable=True)
     national_id = Column(String(50), nullable=True, unique=True)
+    passport_photo = Column(String(500), nullable=True)  # URL to passport photo
     
     # Hard stop fields (per Terms of Reference)
     gender = Column(String(10), nullable=True)  # M/F/Other - for Phase 2 incentive rules

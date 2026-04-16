@@ -171,6 +171,8 @@ async def register_user(
             user.payout_recipient_id = user_data.payout_recipient_id
         if user_data.consent:
             user.consent_timestamp = datetime.utcnow()
+        if user_data.passport_photo:
+            user.passport_photo = user_data.passport_photo
         
         # Store additional optional fields in kyc_data JSON
         kyc_data = {}

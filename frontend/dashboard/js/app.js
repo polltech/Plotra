@@ -661,7 +661,25 @@ class PlotraDashboard {
             if (userProfile) {
                 userProfile.style.display = 'flex';
                 if (userName) userName.textContent = `${this.currentUser.first_name || ''} ${this.currentUser.last_name || ''}`.trim() || this.currentUser.email;
-                if (userAvatar) userAvatar.textContent = (this.currentUser.first_name || this.currentUser.email || 'U').charAt(0).toUpperCase();
+                
+                // Handle passport photo in sidebar
+                const userAvatarImg = document.getElementById('userAvatar');
+                const userAvatarInitials = document.getElementById('userAvatarInitials');
+                if (this.currentUser.passport_photo) {
+                    if (userAvatarImg) {
+                        userAvatarImg.src = this.currentUser.passport_photo;
+                        userAvatarImg.style.display = 'block';
+                    }
+                    if (userAvatarInitials) userAvatarInitials.style.display = 'none';
+                } else {
+                    if (userAvatarImg) {
+                        userAvatarImg.style.display = 'none';
+                    }
+                    if (userAvatarInitials) {
+                        userAvatarInitials.style.display = 'flex';
+                        userAvatarInitials.textContent = (this.currentUser.first_name || this.currentUser.email || 'U').charAt(0).toUpperCase();
+                    }
+                }
             }
         } catch (error) {
             console.error('Failed to load user:', error);
@@ -2111,6 +2129,27 @@ class PlotraDashboard {
         }
     }
     
+    // Get passport photo as base64 string
+    async getPassportPhotoBase64() {
+        const fileInput = document.getElementById('regPassportPhoto');
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+            return null;
+        }
+        
+        try {
+            const file = fileInput.files[0];
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        } catch (e) {
+            console.error('Error reading passport photo:', e);
+            return null;
+        }
+    }
+    
     async handleRegister() {
         const email = document.getElementById('regEmail').value;
         const password = document.getElementById('regPassword').value;
@@ -2185,7 +2224,9 @@ class PlotraDashboard {
                 payout_bank_name: payoutBankName || undefined,
                 payout_account_number: payoutAccountNumber || undefined,
                 // Cooperative membership (required)
-                cooperative_code: cooperativeCode
+                cooperative_code: cooperativeCode,
+                // Passport photo - convert to base64 if selected
+                passport_photo: await this.getPassportPhotoBase64()
             });
             
             console.log('Registration request sent successfully');
@@ -5463,6 +5504,63 @@ class PlotraDashboard {
                     </div>
                 </div>
                 `}
+                
+                <!-- Personal Information Section -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center bg-transparent">
+                                <h4 class="card-title mb-0">
+                                    <i class="bi bi-person-fill me-2"></i>
+                                    Personal Information
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-3 text-center">
+                                        ${user.passport_photo ? 
+                                            `<img src="${user.passport_photo}" alt="Profile Photo" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">` :
+                                            `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 120px; height: 120px; margin: 0 auto;">
+                                                <i class="bi bi-person fs-1 text-white"></i>
+                                            </div>`
+                                        }
+                                        <button class="btn btn-link btn-sm mt-2" onclick="app.showEditPassportPhoto()">
+                                            <i class="bi bi-camera"></i> ${user.passport_photo ? 'Change Photo' : 'Upload Photo'}
+                                        </button>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">Full Name</label>
+                                                <div class="fw-bold">${user.first_name || ''} ${user.last_name || ''}</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">Email</label>
+                                                <div>${user.email || 'N/A'}</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">Phone</label>
+                                                <div>${user.phone || 'N/A'}</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">Gender</label>
+                                                <div>${user.gender || 'Not set'}</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">National ID</label>
+                                                <div>${user.national_id || 'Not set'}</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label text-muted small">Cooperative</label>
+                                                <div>${user.county || 'Not set'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Farm Details Section (Outer Container) -->
                 <div class="row g-4 mb-4">
@@ -10161,6 +10259,31 @@ async generateParcelId() {
         toast.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
+    }
+    
+    // Show edit passport photo modal
+    showEditPassportPhoto() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    await api.updateProfile({ passport_photo: reader.result });
+                    this.currentUser.passport_photo = reader.result;
+                    this.loadPage('profile');
+                    this.showToast('Profile photo updated!', 'success');
+                } catch (err) {
+                    this.showToast('Failed to update photo', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
     }
 }
 

@@ -161,6 +161,7 @@ class UserCreate(BaseModel):
     gender: Optional[str] = None
     id_type: Optional[str] = None
     id_number: Optional[str] = None
+    passport_photo: Optional[str] = None  # URL to passport photo
     cooperative_code: Optional[str] = None
     payout_method: Optional[str] = None
     payout_recipient_id: Optional[str] = None
@@ -197,6 +198,7 @@ class UserResponse(BaseModel):
     payout_recipient_id: Optional[str] = None
     consent_timestamp: Optional[datetime] = None
     national_id: Optional[str] = None
+    passport_photo: Optional[str] = None
     
     class Config:
         from_attributes = True

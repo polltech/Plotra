@@ -81,6 +81,19 @@
                             <input type="text" class="form-control" id="nationalId" name="nationalId" placeholder="e.g., 12345678">
                         </div>
 
+                        <!-- Passport Photo -->
+                        <div class="col-md-6 mb-3">
+                            <label for="passportPhoto" class="form-label">Passport Photo</label>
+                            <input type="file" class="form-control" id="passportPhoto" name="passportPhoto" accept="image/*">
+                            <small class="form-text text-muted">Upload a passport-style photo</small>
+                        </div>
+                        <div class="col-md-6 mb-3" id="passportPhotoPreviewContainer" style="display: none;">
+                            <label class="form-label">Current Passport Photo</label>
+                            <div>
+                                <img id="passportPhotoPreview" src="" alt="Passport Photo" style="max-width: 150px; max-height: 150px; border-radius: 8px; object-fit: cover;">
+                            </div>
+                        </div>
+
                         <!-- Address Section -->
                         <div class="col-12 mt-4 mb-3">
                             <div class="address-header">
