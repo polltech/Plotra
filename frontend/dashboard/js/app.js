@@ -2981,7 +2981,10 @@ class PlotraDashboard {
                     </div>
                 </div>
             `;
-            
+
+            // AOS runs before dynamic content is injected — refresh so cards animate in
+            if (typeof AOS !== 'undefined') AOS.refresh();
+
             setTimeout(() => {
                 try {
                     this.initAdminDashboardCharts(overview, chartData);
