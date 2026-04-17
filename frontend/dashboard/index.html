@@ -98,10 +98,10 @@
     })();
     </script>
     <style>
-        /* Default: show landing, hide app until JS loads */
+        /* Default: show landing, hide app until JS loads (Bootstrap d-none handles display:none) */
         #landing-page { display: block; }
-        #app-container { display: none !important; visibility: hidden; }
-        
+        #app-container { visibility: hidden; }
+
         /* When logged in: hide landing, show app */
         html.pre-auth #landing-page { display: none !important; }
         html.pre-auth #app-container { display: block !important; visibility: visible !important; }
