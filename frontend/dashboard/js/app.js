@@ -600,8 +600,18 @@ class PlotraDashboard {
         document.body.style.paddingRight = '';
     }
     
+    showLoadingOverlay() {
+        const overlay = document.getElementById('appLoadingOverlay');
+        if (overlay) overlay.classList.add('show');
+    }
+
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('appLoadingOverlay');
+        if (overlay) overlay.classList.remove('show');
+    }
+
     showApp() {
-        console.log('Showing app...');
+        this.showLoadingOverlay();
         document.body.classList.remove('auth-active');
         document.documentElement.classList.add('pre-auth');
 
@@ -614,17 +624,12 @@ class PlotraDashboard {
             landingPage.style.display = 'none';
         }
 
-        // Show spinner immediately so content area is never blank
-        const pageContent = document.getElementById('pageContent');
-        if (pageContent) {
-            pageContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Loading...</p></div>';
-        }
-
         this.loadCurrentUser().then(() => {
             this.updateSidebarNavigation();
             this.loadPage('dashboard');
         }).catch(err => {
             console.error('Failed to load user:', err);
+            this.hideLoadingOverlay();
             localStorage.removeItem('plotra_token');
             localStorage.removeItem('plotra_user');
             this.showToast('Session expired. Please login again.', 'error');
@@ -2745,15 +2750,16 @@ class PlotraDashboard {
                     await this.loadProfile(content);
                     break;
                 default:
-                    console.log('loadPage: unknown page requested:', page);
                     content.innerHTML = `<div class="alert alert-info">Page not found: '${page}'</div>`;
             }
         } catch (error) {
             console.error('Failed to load page:', error);
             if (content) {
-                content.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                content.innerHTML = `<div class="alert alert-danger m-3"><strong>Failed to load page.</strong> ${error.message}<br><a href="#" onclick="app.loadPage('dashboard');return false;">Go to Dashboard</a></div>`;
             }
             this.showToast('Failed to load page', 'error');
+        } finally {
+            this.hideLoadingOverlay();
         }
     }
     
