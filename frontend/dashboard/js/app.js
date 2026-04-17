@@ -2982,7 +2982,8 @@ class PlotraDashboard {
                 </div>
             `;
 
-            // AOS runs before dynamic content is injected — refresh so cards animate in
+            // Force AOS elements visible immediately — AOS was init'd before dynamic content existed
+            content.querySelectorAll('[data-aos]').forEach(el => el.classList.add('aos-animate'));
             if (typeof AOS !== 'undefined') AOS.refresh();
 
             setTimeout(() => {
