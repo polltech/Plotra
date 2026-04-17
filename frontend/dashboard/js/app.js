@@ -135,9 +135,13 @@ class PlotraDashboard {
     showLandingPage() {
         console.log('Showing landing page...');
         document.body.classList.remove('auth-active');
+        document.documentElement.classList.remove('pre-auth');
         const landingPage = document.getElementById('landing-page');
         const appContainer = document.getElementById('app-container');
-        if (landingPage) landingPage.classList.remove('d-none');
+        if (landingPage) {
+            landingPage.classList.remove('d-none');
+            landingPage.style.removeProperty('display');
+        }
         if (appContainer) appContainer.classList.add('d-none');
     }
 
@@ -596,30 +600,36 @@ class PlotraDashboard {
         document.body.style.paddingRight = '';
     }
     
-       showApp() {
-    console.log('Showing app...');
-    document.body.classList.remove('auth-active');
-    document.documentElement.classList.add('pre-auth');
-    
-    const appContainer = document.getElementById('app-container');
-    const landingPage = document.getElementById('landing-page');
-    const appLoading = document.getElementById('app-loading');
-    
-    if (appContainer) appContainer.classList.remove('d-none');
-    if (landingPage) {
-        landingPage.classList.add('d-none');
-        landingPage.style.display = 'none';
-    }
+    showApp() {
+        console.log('Showing app...');
+        document.body.classList.remove('auth-active');
+        document.documentElement.classList.add('pre-auth');
 
-    this.loadCurrentUser().then(() => {
-        if (appLoading) appLoading.style.display = 'none';
-        this.updateSidebarNavigation();
-        this.loadPage('dashboard');
-    }).catch(err => {
-        console.error('Failed to show app:', err);
-        if (appLoading) appLoading.style.display = 'none';
-        this.showToast('Failed to load user data', 'error');
-    });
+        const appContainer = document.getElementById('app-container');
+        const landingPage = document.getElementById('landing-page');
+
+        if (appContainer) appContainer.classList.remove('d-none');
+        if (landingPage) {
+            landingPage.classList.add('d-none');
+            landingPage.style.display = 'none';
+        }
+
+        // Show spinner immediately so content area is never blank
+        const pageContent = document.getElementById('pageContent');
+        if (pageContent) {
+            pageContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Loading...</p></div>';
+        }
+
+        this.loadCurrentUser().then(() => {
+            this.updateSidebarNavigation();
+            this.loadPage('dashboard');
+        }).catch(err => {
+            console.error('Failed to load user:', err);
+            localStorage.removeItem('plotra_token');
+            localStorage.removeItem('plotra_user');
+            this.showToast('Session expired. Please login again.', 'error');
+            this.showLandingPage();
+        });
     }
         
    
@@ -683,11 +693,7 @@ class PlotraDashboard {
             }
         } catch (error) {
             console.error('Failed to load user:', error);
-            // Clear invalid token and show landing page
-            localStorage.removeItem('plotra_token');
-            localStorage.removeItem('plotra_user');
-            this.showToast('Session expired. Please login again.', 'error');
-            this.showLandingPage();
+            throw error; // propagate so showApp().catch() handles redirect
         }
     }
     
@@ -2759,8 +2765,8 @@ class PlotraDashboard {
             await this.renderEUDRReviewerDashboard(content);
         } else if (role === 'COOP_ADMIN' || role === 'COOPERATIVE_ADMIN') {
             await this.renderCoopAdminDashboard(content);
-        } else if (role === 'COOP_OFFICER' || role === 'FACTOR') {
-            await this.renderCoopOfficerDashboard(content);
+        } else if (role === 'COOP_OFFICER' || role === 'FACTOR' || role === 'COOPERATIVE_OFFICER') {
+            await this.renderCoopAdminDashboard(content);
         } else if (role === 'PLATFORM_ADMIN' || role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'PLOTRA_ADMIN') {
             await this.renderAdminDashboard(content);
         } else {
@@ -3230,32 +3236,14 @@ class PlotraDashboard {
     }
 
     async renderFarmerDashboard(content) {
-        console.log('Rendering Farmer Dashboard...');
-        console.log('Content element:', content);
-        if (!content) {
-            console.error('Content element is null!');
-            // Try to find it directly
-            content = document.getElementById('pageContent');
-            console.log('Found content:', content);
-            if (!content) {
-                document.body.innerHTML = '<div style="padding:50px;color:red;">ERROR: No pageContent element!</div>';
-                return;
-            }
-        }
-        
-        // Force display
-        content.style.display = 'block';
-        
         try {
-            console.log('Fetching farmer data...');
             const [farmsResponse, deliveries, stats] = await Promise.all([
                 api.getFarms(),
                 api.getDeliveries(),
                 api.getFarmerStats()
             ]);
 
-            const farms = farmsResponse.farms || [];
-            const farmList = Array.isArray(farms) ? farms : (farms ? [farms] : []);
+            const farmList = Array.isArray(farmsResponse) ? farmsResponse : (farmsResponse?.farms || []);
             const deliveryList = Array.isArray(deliveries) ? deliveries : [];
             const totalWeight = deliveryList.reduce((sum, d) => sum + (d.net_weight_kg || 0), 0);
             
@@ -3440,22 +3428,8 @@ class PlotraDashboard {
 
         } catch (error) {
             console.error('Failed to load farmer dashboard:', error);
-            content.innerHTML = '<div class="p-4 text-danger">Error: ' + error.message + '</div>';
+            this.renderOfflineAlert(content);
         }
-        
-        console.log('Dashboard HTML set, length:', content.innerHTML.length);
-        
-        // Force visibility
-        setTimeout(() => {
-            const pc = document.getElementById('pageContent');
-            if (pc) {
-                pc.style.display = 'block';
-                pc.style.visibility = 'visible';
-                pc.style.opacity = '1';
-                pc.style.minHeight = '500px';
-                console.log('Forced pageContent visibility');
-            }
-        }, 200);
     }
 
     initFarmerDashboardCharts(deliveries) {
@@ -3933,7 +3907,7 @@ class PlotraDashboard {
 
         try {
             const response = await api.getFarms();
-            const farms = response.farms || [];
+            const farms = Array.isArray(response) ? response : (response?.farms || []);
             const list = document.getElementById('farms-admin-list');
             
             if (farms && farms.length > 0) {
@@ -4179,7 +4153,7 @@ class PlotraDashboard {
 
         try {
             const response = await api.getFarms();
-            const farms = response.farms || [];
+            const farms = Array.isArray(response) ? response : (response?.farms || []);
             const list = document.getElementById('parcels-list');
             let allParcels = [];
             
@@ -4394,7 +4368,7 @@ class PlotraDashboard {
                 document.getElementById('monitor-title').textContent = data.farm_name || data.name || 'Unnamed Farm';
             } else {
                 const response = await api.getFarms();
-                const farms = response.farms || [];
+                const farms = Array.isArray(response) ? response : (response?.farms || []);
                 data = null;
                 for (const f of farms) {
                     const p = f.parcels?.find(p => p.id == id);
@@ -4569,7 +4543,7 @@ class PlotraDashboard {
     async showRecordDeliveryModal() {
         try {
             const response = await api.getFarms();
-            const farms = response.farms || [];
+            const farms = Array.isArray(response) ? response : (response?.farms || []);
             const farmSelect = document.getElementById('deliveryFarm');
             if (farmSelect) {
                 farmSelect.innerHTML = '<option value="">Select Farm</option>' + 
@@ -5292,8 +5266,7 @@ class PlotraDashboard {
 
         try {
             const response = await api.getFarms();
-            const farms = response.farms || [];
-            const farmList = Array.isArray(farms) ? farms : (farms ? [farms] : []);
+            const farmList = Array.isArray(response) ? response : (response?.farms || []);
             const statusDiv = document.getElementById('farmer-compliance-status');
             
             // Guard against null statusDiv
@@ -5459,7 +5432,7 @@ class PlotraDashboard {
         const farmSelect = document.getElementById('ddsFarmIds');
         try {
             const response = await api.getFarms();
-            const farms = response.farms || [];
+            const farms = Array.isArray(response) ? response : (response?.farms || []);
             farmSelect.innerHTML = '';
             farms.forEach(farm => {
                 const option = document.createElement('option');
@@ -5580,8 +5553,7 @@ class PlotraDashboard {
         
         try {
             const farmsResponse = await api.getFarms();
-            const farms = farmsResponse?.farms || [];
-            const farmArray = Array.isArray(farms) ? farms : (farms ? [farms] : []);
+            const farmArray = Array.isArray(farmsResponse) ? farmsResponse : (farmsResponse?.farms || []);
             
             const parcelsData = [];
             for (const farm of farmArray) {
@@ -6184,10 +6156,9 @@ class PlotraDashboard {
     async showUploadDocumentModal() {
         try {
             const response = await api.getFarms();
-            const farms = response.farms || [];
+            const farmArray = Array.isArray(response) ? response : (response?.farms || []);
             const farmSelect = document.getElementById('docFarm');
             if (farmSelect) {
-                const farmArray = Array.isArray(farms) ? farms : (farms ? [farms] : []);
                 farmSelect.innerHTML = '<option value="">Select Farm</option>' + 
                     farmArray.map(f => `<option value="${f.id}">${f.farm_name || f.name || 'Farm #'+f.id}</option>`).join('');
             }
