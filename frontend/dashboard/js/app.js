@@ -2985,13 +2985,13 @@ class PlotraDashboard {
                 </div>
             `;
             
-            // Re-initialize UI components synchronously
-            console.log('Initializing charts and sub-lists...');
-            try {
-                this.initAdminDashboardCharts(overview, chartData);
-            } catch (chartError) {
-                console.error('Error initializing charts:', chartError);
-            }
+            setTimeout(() => {
+                try {
+                    this.initAdminDashboardCharts(overview, chartData);
+                } catch (chartError) {
+                    console.error('Error initializing charts:', chartError);
+                }
+            }, 50);
 
             try {
                 this.loadRecentVerifications();
@@ -3046,11 +3046,8 @@ class PlotraDashboard {
     initAdminDashboardCharts(overview, chartData) {
         const chartContainer = document.querySelector("#compliance-chart");
         if (!chartContainer) {
-            console.log('Chart container not found');
             return;
         }
-        console.log('Chart container found, checking ApexCharts...');
-        console.log('ApexCharts defined:', typeof ApexCharts);
         
         // Use real data from API if available, fallback to mock data
         const compliantCount = chartData?.values?.[0] || overview?.compliance_breakdown?.compliant || 0;
@@ -3113,9 +3110,7 @@ class PlotraDashboard {
             grid: { show: true, strokeDashArray: 3 }
         };
 
-        console.log('ApexCharts library status:', typeof ApexCharts);
         if (typeof ApexCharts === 'undefined') {
-            console.error('ApexCharts library not loaded');
             return;
         }
 
@@ -3123,16 +3118,6 @@ class PlotraDashboard {
             const chart = new ApexCharts(document.querySelector("#compliance-chart"), options);
             chart.render();
             this.charts['compliance'] = chart;
-            console.log('Chart rendered successfully');
-            
-            // Debug: Check chart dimensions
-            setTimeout(() => {
-                const chartEl = document.querySelector("#compliance-chart");
-                const svg = chartEl?.querySelector('svg');
-                console.log('Chart container dimensions:', chartEl?.getBoundingClientRect());
-                console.log('Chart SVG dimensions:', svg?.getBoundingClientRect());
-                console.log('Chart innerHTML:', chartEl?.innerHTML?.substring(0, 200));
-            }, 500);
         } catch (e) {
             console.error('Error rendering chart:', e);
         }
