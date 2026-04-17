@@ -600,18 +600,7 @@ class PlotraDashboard {
         document.body.style.paddingRight = '';
     }
     
-    showLoadingOverlay() {
-        const overlay = document.getElementById('appLoadingOverlay');
-        if (overlay) overlay.classList.add('show');
-    }
-
-    hideLoadingOverlay() {
-        const overlay = document.getElementById('appLoadingOverlay');
-        if (overlay) overlay.classList.remove('show');
-    }
-
     showApp() {
-        this.showLoadingOverlay();
         document.body.classList.remove('auth-active');
         document.documentElement.classList.add('pre-auth');
 
@@ -629,7 +618,6 @@ class PlotraDashboard {
             this.loadPage('dashboard');
         }).catch(err => {
             console.error('Failed to load user:', err);
-            this.hideLoadingOverlay();
             localStorage.removeItem('plotra_token');
             localStorage.removeItem('plotra_user');
             this.showToast('Session expired. Please login again.', 'error');
@@ -2758,8 +2746,6 @@ class PlotraDashboard {
                 content.innerHTML = `<div class="alert alert-danger m-3"><strong>Failed to load page.</strong> ${error.message}<br><a href="#" onclick="app.loadPage('dashboard');return false;">Go to Dashboard</a></div>`;
             }
             this.showToast('Failed to load page', 'error');
-        } finally {
-            this.hideLoadingOverlay();
         }
     }
     
