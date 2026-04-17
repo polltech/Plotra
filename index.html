@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="scroll-behavior: smooth;">
+<html lang="en">
 <head>
 
     <meta charset="UTF-8">
@@ -32,8 +32,6 @@
     
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Flag Icons - using cdnjs for better reliability -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.2.0/css/flag-icons.min.css" rel="stylesheet">
     
     <!-- Leaflet CSS -->
     <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
@@ -88,112 +86,17 @@
     </style>
 
     <!-- Hide landing page instantly if user is already logged in (prevents flash) -->
-     <script>
-    (function() {
-        var token = localStorage.getItem('plotra_token');
-        if (token && token.length > 10) {
-            var landing = document.getElementById('landing-page');
-            if (landing) landing.style.display = 'none';
-        }
-    })();
+    <script>
+        (function () {
+            var token = localStorage.getItem('plotra_token');
+            if (token && token.length > 10) {
+                document.documentElement.classList.add('pre-auth');
+            }
+        })();
     </script>
     <style>
-        /* Default: show landing, hide app until JS loads */
-        #landing-page { display: block; }
-        #app-container { display: none !important; visibility: hidden; }
-        
-        /* When logged in: hide landing, show app */
         html.pre-auth #landing-page { display: none !important; }
-        html.pre-auth #app-container { display: block !important; visibility: visible !important; }
-        
-        /* Loading state - show loader as fixed overlay */
-        .page-loading {
-            display: none !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            justify-content: center !important;
-            align-items: center !important;
-            background: rgba(249, 246, 240, 0.9) !important;
-            z-index: 9999 !important;
-        }
-        .page-loading.show {
-            display: flex !important;
-        }
-        .page-loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #d2b48c;
-            border-top-color: #6f4e37;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
-
-    <!-- Integrated Country Code Select Styles -->
-    <style>
-        .country-code-select {
-            width: 160px !important;
-            min-width: 160px !important;
-            max-width: 160px !important;
-            flex: 0 0 160px !important;
-            border-right: none !important;
-            border-top-right-radius: 0 !important;
-            border-bottom-right-radius: 0 !important;
-            background-color: #f8f9fa !important;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            padding-right: 25px !important;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236f4e37' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") !important;
-            background-repeat: no-repeat !important;
-            background-position: right 8px center !important;
-        }
-        .phone-input-with-code {
-            border-left: none !important;
-            border-top-left-radius: 0 !important;
-            border-bottom-left-radius: 0 !important;
-            padding-left: 8px !important;
-            padding-right: 8px !important;
-            flex: 1 1 auto !important;
-            min-width: 150px !important;
-            width: auto !important;
-        }
-        .phone-input-with-code:focus {
-            border-left: none !important;
-            outline: none;
-            box-shadow: 0 0 0 0.2rem rgba(111, 78, 55, 0.25);
-        }
-        .phone-input-with-code:focus + .country-code-select {
-            border-color: #6f4e37 !important;
-        }
-        /* Phone input groups - match other field widths */
-        .phone-input-wrapper {
-            display: block;
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-        }
-        .phone-input-group {
-            flex-wrap: nowrap !important;
-            display: flex !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-            gap: 0 !important;
-        }
-        .phone-input-group > * {
-            white-space: nowrap !important;
-            box-sizing: border-box !important;
-        }
+        html.pre-auth #app-container { display: block !important; }
     </style>
 
     <!-- Landing Page Styles -->
@@ -205,324 +108,9 @@
         }
 
         .navbar {
-            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
-            background: rgba(255, 255, 255, 0.98) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95) !important;
             backdrop-filter: blur(10px);
-        }
-
-        /* Modern Nav Link Styles */
-        .nav-link-modern {
-            position: relative;
-            color: #4a4a4a !important;
-            padding: 0.5rem 1rem !important;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-
-        .nav-link-modern::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #8b4513, #6f4e37);
-            transition: all 0.3s ease;
-            transform: translateX(-50%);
-            border-radius: 2px;
-        }
-
-        .nav-link-modern:hover {
-            color: #8b4513 !important;
-            background: rgba(139, 69, 19, 0.08);
-        }
-
-        .nav-link-modern:hover::before {
-            width: 60%;
-        }
-
-        .nav-link-modern.active {
-            color: #8b4513 !important;
-            background: rgba(139, 69, 19, 0.1);
-        }
-
-        .nav-link-modern.active::before {
-            width: 80%;
-        }
-
-        /* Get Started Button */
-        .btn-nav-get-started {
-            background: linear-gradient(135deg, #8b4513 0%, #6f4e37 100%);
-            color: white !important;
-            border: none;
-            border-radius: 25px;
-            padding: 0.6rem 1.5rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
-        }
-
-        .btn-nav-get-started:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
-            background: linear-gradient(135deg, #6f4e37 0%, #8b4513 100%);
-            color: white !important;
-        }
-
-        /* Mobile Navbar Styles */
-        @media (max-width: 991px) {
-            #landing-page .navbar {
-                padding: 0.5rem 0 !important;
-            }
-
-            #landing-page .navbar-brand img {
-                height: 32px !important;
-            }
-
-            #landing-page .navbar-brand span {
-                font-size: 1.25rem !important;
-            }
-
-            /* Mobile menu - full width dropdown */
-            #landing-page .navbar-collapse {
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: white;
-                padding: 0;
-                margin: 0;
-                border-radius: 0 0 12px 12px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-                z-index: 1000;
-                max-height: calc(100vh - 60px);
-                overflow-y: auto;
-            }
-
-            #landing-page .navbar-collapse.show {
-                display: block;
-            }
-
-            /* Center the links in mobile */
-            #landing-page .navbar-nav {
-                flex-direction: column !important;
-                align-items: stretch !important;
-                padding: 0.5rem;
-                margin: 0;
-                gap: 0.25rem;
-            }
-
-            #landing-page .nav-item {
-                width: 100%;
-            }
-
-            .nav-link-modern {
-                display: block;
-                width: 100%;
-                padding: 0.875rem 1rem !important;
-                border-radius: 8px;
-                text-align: center;
-                font-size: 1rem;
-                font-weight: 500;
-            }
-
-            .nav-link-modern:hover {
-                background: rgba(139, 69, 19, 0.1);
-            }
-
-            .nav-link-modern::before {
-                display: none;
-            }
-
-            /* Buttons container on mobile */
-            .navbar > .container .navbar-collapse .d-flex {
-                flex-direction: column !important;
-                padding: 1rem;
-                border-top: 1px solid #eee;
-                margin: 0;
-                gap: 0.75rem !important;
-            }
-
-            .navbar > .container .navbar-collapse .d-flex a,
-            .navbar > .container .navbar-collapse .d-flex button {
-                width: 100%;
-                text-align: center;
-                justify-content: center;
-                border-radius: 8px !important;
-            }
-
-            /* Log In link styling on mobile */
-            .navbar > .container .navbar-collapse .d-flex a {
-                background: transparent;
-                color: #8b4513 !important;
-                border: 2px solid #8b4513;
-            }
-
-            /* Get Started button on mobile */
-            .navbar > .container .navbar-collapse .d-flex .btn-nav-get-started {
-                background: linear-gradient(135deg, #8b4513 0%, #6f4e37 100%);
-                color: white !important;
-                border: none;
-                padding: 0.875rem 1rem;
-            }
-        }
-
-        /* Extra small devices */
-        @media (max-width: 576px) {
-            #landing-page .navbar-brand span {
-                font-size: 1.1rem !important;
-            }
-
-            #landing-page .nav-link-modern {
-                font-size: 0.95rem !important;
-                padding: 0.75rem 0.875rem !important;
-            }
-
-            /* Make hamburger menu visible */
-            #landing-page .navbar-toggler {
-                padding: 0.5rem;
-                border: none;
-            }
-
-            #landing-page .navbar-toggler:focus {
-                box-shadow: none;
-            }
-        }
-
-        /* Ensure smooth scroll offset for fixed header */
-        :root {
-            scroll-padding-top: 80px;
-        }
-
-        /* Center navbar content — scoped to landing page to avoid bleeding into sidebar */
-        #landing-page .navbar .container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        #landing-page .navbar-brand {
-            flex-shrink: 0;
-        }
-
-        #landing-page .navbar-collapse {
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-        }
-
-        #landing-page .navbar-nav {
-            flex-direction: row;
-            align-items: center;
-            margin: 0;
-            padding: 0;
-            gap: 0;
-        }
-
-        .nav-link-modern {
-            font-size: 0.85rem;
-            padding: 0.5rem 0.75rem !important;
-        }
-
-        #landing-page .d-flex.align-items-center.gap-3 {
-            flex-shrink: 0;
-            margin-left: 1rem;
-        }
-
-        /* Extra small screens */
-        @media (max-width: 767px) {
-            #landing-page .navbar-brand span {
-                font-size: 1.2rem !important;
-            }
-
-            #landing-page .nav-link-modern {
-                font-size: 0.8rem;
-                padding: 0.5rem 0.5rem !important;
-            }
-
-            #landing-page .btn-nav-get-started {
-                padding: 0.5rem 1rem;
-                font-size: 0.85rem;
-            }
-
-            #landing-page .d-flex.align-items-center.gap-3 {
-                gap: 0.5rem !important;
-            }
-
-            #landing-page .d-flex.align-items-center.gap-3 i {
-                display: none;
-            }
-        }
-
-        .hero-section {
-            position: relative;
-        }
-
-        .hero-section .carousel-item {
-            transition: transform 0.8s ease-in-out;
-        }
-
-        .hero-section .carousel-item h2,
-        .hero-section .carousel-item h3 {
-            animation: fadeInUp 0.8s ease-out;
-        }
-
-        /* Ken Burns effect for hero images */
-        @keyframes kenburns {
-            0% {
-                transform: scale(1) translate(0, 0);
-            }
-            100% {
-                transform: scale(1.1) translate(-2%, -1%);
-            }
-        }
-
-        /* Hero slide transitions */
-        .hero-slide {
-            transition: opacity 1.5s ease-in-out;
-        }
-
-        .hero-slide.active {
-            opacity: 1;
-            z-index: 1;
-        }
-
-        /* Floating Animation for cards */
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-10px);
-            }
-        }
-
-        .animate-float {
-            animation: float 3s ease-in-out infinite;
-        }
-
-        /* Image slide transitions */
-        #heroImageSlides .carousel-item {
-            transition: transform 0.8s ease-in-out, opacity 0.8s ease-in-out;
-        }
-
-        #heroImageSlides .carousel-item img {
-            transition: transform 0.5s ease;
-        }
-
-        #heroImageSlides .carousel-item:hover img {
-            transform: scale(1.02);
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .navbar-brand {
@@ -552,7 +140,7 @@
             border-color: #a0522d;
         }
 
-        /* Modal close button - coffee color X */
+        /* Modal close button - black X design */
         .auth-modal .modal-close-btn {
             position: absolute !important;
             top: 20px !important;
@@ -565,8 +153,8 @@
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            color: #8b4513 !important;
-            opacity: 1 !important;
+            color: #000000 !important;
+            opacity: 0.8 !important;
             transition: all 0.3s ease !important;
             cursor: pointer !important;
             font-size: 1.2rem !important;
@@ -575,118 +163,6 @@
         .auth-modal .modal-close-btn:hover {
             opacity: 1 !important;
             transform: scale(1.1) !important;
-            color: #6f4e37 !important;
-        }
-
-        /* All modal close buttons should use coffee color */
-        .modal-header .btn-close,
-        .modal .btn-close,
-        .btn-close,
-        .auth-modal .btn-close {
-            color: #8b4513 !important;
-            opacity: 0.8 !important;
-            background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%238b4513'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat !important;
-        }
-
-        .modal-header .btn-close:hover,
-        .modal .btn-close:hover,
-        .btn-close:hover,
-        .auth-modal .btn-close:hover {
-            opacity: 1 !important;
-            color: #6f4e37 !important;
-        }
-
-        /* Coffee color utility */
-        .text-coffee {
-            color: #8b4513 !important;
-        }
-
-        /* Governance Cards Hover Effects */
-        .governance-card, .process-card {
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .governance-card::before, .process-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #8b4513, #6f4e37);
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.3s ease;
-        }
-
-        .governance-card:hover, .process-card:hover {
-            border-color: #8b4513 !important;
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(139, 69, 19, 0.15);
-        }
-
-        .governance-card:hover::before, .process-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .governance-card .governance-icon {
-            transition: all 0.3s ease;
-        }
-
-        .governance-card:hover .governance-icon {
-            transform: scale(1.1) rotate(5deg);
-            background: linear-gradient(135deg, #8b4513 0%, #6f4e37 100%);
-        }
-
-        .governance-card:hover .governance-icon i {
-            color: white !important;
-        }
-
-        .governance-card h5 {
-            transition: color 0.3s ease;
-        }
-
-        .governance-card:hover h5 {
-            color: #8b4513;
-        }
-
-        /* Process Card Icon Animation */
-        .process-card .process-number {
-            transition: all 0.4s ease;
-        }
-
-        .process-card:hover .process-number {
-            transform: scale(1.15) rotate(10deg);
-            box-shadow: 0 12px 35px rgba(139,69,19,0.4);
-        }
-
-        .process-card:hover h4 {
-            color: #8b4513;
-        }
-
-        /* Process Arrow Animation */
-        .process-arrow {
-            animation: pulse-arrow 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-arrow {
-            0%, 100% { opacity: 0.6; transform: translateY(-50%) translateX(0); }
-            50% { opacity: 1; transform: translateY(-50%) translateX(8px); }
-        }
-
-        @media (max-width: 767px) {
-            .process-arrow { display: none !important; }
-        }
-
-        .bg-coffee {
-            background-color: #8b4513 !important;
-        }
-
-        .border-coffee {
-            border-color: #8b4513 !important;
         }
 
         .auth-modal .modal-body {
@@ -695,19 +171,25 @@
             max-width: 100% !important;
         }
 
-        /* Centre auth modals — only engage flex when Bootstrap adds .show */
-        #loginModal.show,
-        #registerModal.show {
+        /* Centre auth modals using flex on the overlay itself */
+        #loginModal,
+        #registerModal {
             display: flex !important;
             align-items: center;
             justify-content: center;
-            z-index: 1050 !important;
+            padding: 1rem !important;
+        }
+
+        /* Override Bootstrap's display:none default without breaking hide/show */
+        #loginModal:not(.show),
+        #registerModal:not(.show) {
+            display: none !important;
         }
 
         .auth-modal .modal-dialog {
-            margin: 1.75rem auto !important;
+            margin: 0 !important;
             max-width: 480px !important;
-            width: calc(100% - 2rem) !important;
+            width: 100% !important;
         }
 
         .auth-modal .modal-content {
@@ -1421,85 +903,6 @@
                 width: 100%;
             }
         }
-
-        /* Step Wizard Styles */
-        .step-wizard {
-            position: relative;
-            margin-bottom: 1.5rem;
-        }
-        .step-tabs {
-            position: relative;
-            z-index: 1;
-        }
-        .step-item {
-            text-align: center;
-            flex: 1;
-            position: relative;
-        }
-        .step-item.active .step-circle {
-            background: #3a57e8;
-            color: white;
-            border-color: #3a57e8;
-        }
-        .step-item.active .step-label {
-            color: #3a57e8;
-            font-weight: 600;
-        }
-        .step-item.completed .step-circle {
-            background: #1aa053;
-            border-color: #1aa053;
-            color: white;
-        }
-        .step-circle {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #fff;
-            border: 2px solid #dee2e6;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            color: #6c757d;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s ease;
-        }
-        .step-label {
-            font-size: 0.75rem;
-            color: #6c757d;
-        }
-        .step-progress {
-            position: absolute;
-            top: 18px;
-            left: 10%;
-            right: 10%;
-            height: 2px;
-            background: #dee2e6;
-            z-index: 0;
-        }
-        .step-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #3a57e8, #1aa053);
-            transition: width 0.4s ease;
-        }
-        .step-pane {
-            display: none;
-        }
-        .step-pane.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .step-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 1rem;
-            border-top: 1px solid #eee;
-        }
     </style>
 </head>
 <body>
@@ -1507,414 +910,84 @@
     <!-- Landing Page -->
     <div id="landing-page" class="landing-page">
 
-        <!-- Modern Navigation -->
-        <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="box-shadow: 0 2px 20px rgba(0,0,0,0.08);">
+        <!-- Navigation Header -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
             <div class="container">
                 <a class="navbar-brand d-flex align-items-center" href="#">
-                    <img src="Logo_for_coffee_202604042330.jpeg" alt="Plotra" style="height: 40px; border-radius: 8px;">
+                    <img src="Logo_for_coffee_202604042330.jpeg" alt="Plotra" style="height: 36px;">
                     <span class="fw-bold ms-2" style="color: #8b4513; font-size: 1.5rem;">Plotra</span>
                 </a>
-                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#landingNav" style="padding: 0.5rem; color: #8b4513;">
-                    <i class="bi bi-list" style="font-size: 1.5rem; color: #8b4513;"></i>
-                </button>
-                <div class="collapse navbar-collapse" id="landingNav">
-                    <ul class="navbar-nav me-auto align-items-center">
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-modern fw-medium px-3" href="#how-it-works">How It Works</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-modern fw-medium px-3" href="#importers">For Importers</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-modern fw-medium px-3" href="#cooperatives">Cooperatives</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-modern fw-medium px-3" href="#governance">Data Governance</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-modern fw-medium px-3" href="#about">About</a>
-                        </li>
-                    </ul>
-                    <div class="d-flex align-items-center gap-3">
-                        <a href="#" onclick="window.app?.showLoginModal(); return false;" class="nav-link nav-link-modern fw-medium" style="color: #8b4513;">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Log In
-                        </a>
-                        <button type="button" class="btn btn-nav-get-started px-4 fw-semibold" onclick="window.app?.showRegisterModal()">
-                            <i class="bi bi-person-plus me-1"></i>Get Started
-                        </button>
-                    </div>
+
+                <div class="navbar-nav ms-auto d-flex flex-row gap-2">
+                    <button type="button" class="btn btn-outline-primary" onclick="window.app?.showLoginModal()">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Get Started
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="window.app?.showRegisterModal()">
+                        <i class="bi bi-person-plus me-1"></i>Join Our Community
+                    </button>
                 </div>
             </div>
         </nav>
 
-        <!-- Modern Hero Section with Slides -->
-        <section class="hero-section" style="padding: 160px 0 100px; background: linear-gradient(135deg, #faf8f5 0%, #fff 50%, #f5f0e8 100%); position: relative; overflow: hidden;">
-            <!-- Background Decorations -->
-            <div style="position: absolute; top: -50%; right: -20%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(139,69,19,0.08) 0%, transparent 70%); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: -30%; left: -10%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(139,69,19,0.06) 0%, transparent 70%); border-radius: 50%;"></div>
-            
-            <div class="container position-relative">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="container">
                 <div class="row align-items-center">
-                    <div class="col-lg-7">
-                        <!-- Slide Content -->
-                        <div id="heroSlides" class="carousel slide" data-bs-ride="carousel" data-bs-interval="7000">
-                            <div class="carousel-inner">
-                                <div class="carousel-item active">
-                                    <h2 class="hero-title mb-3" style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; color: #2d2d2d;">
-                                        Welcome to Plotra
-                                    </h2>
-                                    <h3 class="mb-4" style="font-size: 1.6rem; font-weight: 600; color: #8b4513;">
-                                        Parcel-based infrastructure for EUDR compliance
-                                    </h3>
-                                </div>
-                                <div class="carousel-item">
-                                    <h2 class="hero-title mb-3" style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; color: #2d2d2d;">
-                                        Supply Chain Traceability
-                                    </h2>
-                                    <h3 class="mb-4" style="font-size: 1.6rem; font-weight: 600; color: #8b4513;">
-                                        From farm to market, every step tracked
-                                    </h3>
-                                </div>
-                                <div class="carousel-item">
-                                    <h2 class="hero-title mb-3" style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; color: #2d2d2d;">
-                                        Smallholder-Focused
-                                    </h2>
-                                    <h3 class="mb-4" style="font-size: 1.6rem; font-weight: 600; color: #8b4513;">
-                                        Built for fragmented land and real data
-                                    </h3>
-                                </div>
-                                <div class="carousel-item">
-                                    <h2 class="hero-title mb-3" style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; color: #2d2d2d;">
-                                        EUDR Compliant
-                                    </h2>
-                                    <h3 class="mb-4" style="font-size: 1.6rem; font-weight: 600; color: #8b4513;">
-                                        Verified deforestation-free supply chains
-                                    </h3>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <p class="hero-subtitle mb-4 mt-3" style="font-size: 1.15rem; line-height: 1.8; max-width: 550px; color: #5a5a5a;">
-                            Plotra structures the data behind smallholder agriculture — linking land, production, and cooperative verification into auditable records that meet regulatory requirements.
-                        </p>
-                        
-                        <p class="text-muted mb-4" style="font-size: 1rem;">
-                            Works with fragmented land, mixed systems, and incomplete data.
-                        </p>
-                        
-                        <div class="d-flex gap-3 flex-wrap align-items-center">
-                            <a href="#importers" class="btn btn-lg px-4 fw-semibold" style="background: #8b4513; color: white; border-radius: 30px; box-shadow: 0 4px 15px rgba(139,69,19,0.3);">
-                                For Importers
-                            </a>
-                            <a href="#cooperatives" class="btn btn-lg px-4 fw-semibold" style="background: transparent; border: 2px solid #8b4513; color: #8b4513; border-radius: 30px;">
-                                For Cooperatives
-                            </a>
-                        </div>
-                        
-                        <!-- Welcome Message -->
-                        <div class="mt-5 p-4 bg-white rounded-4 shadow-sm" style="border-left: 4px solid #8b4513; max-width: 500px;">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-geo-alt-fill" style="color: #8b4513; font-size: 1.5rem;"></i>
-                                <span class="fw-bold ms-2" style="color: #8b4513;">Your Partner in EUDR Compliance</span>
-                            </div>
-                            <p class="mb-0 text-muted" style="font-size: 0.95rem;">
-                                Transform your coffee farming with precision GPS mapping, EUDR compliance, and cooperative management. Join thousands of farmers building sustainable futures.
+                    <div class="col-lg-6">
+                        <div class="hero-content">
+                            <h2 class="hero-title mb-4">
+                                Transforming Coffee<br>
+                                <span style="color: #8b4513;">Farming with Technology</span>
+                            </h2>
+                            <p class="hero-subtitle mb-5">
+                                Transform your coffee farming with Plotra's comprehensive digital platform.
+                                Map your fields with precision GPS, track production in real-time, ensure EUDR compliance,
+                                and connect with cooperatives—all in one powerful, easy-to-use system designed
+                                specifically for East African coffee farmers.
                             </p>
-                        </div>
-                        
-                        <!-- Trust Indicators (Real Data) -->
-                        <div class="d-flex gap-4 mt-4">
-                            <div class="text-center">
-                                <h4 class="fw-bold mb-0" style="color: #8b4513;"><span id="farmersCount">0</span>+</h4>
-                                <small class="text-muted">Farmers Mapped</small>
-                            </div>
-                            <div class="text-center">
-                                <h4 class="fw-bold mb-0" style="color: #8b4513;"><span id="complianceRate">0</span>%</h4>
-                                <small class="text-muted">EUDR Compliant</small>
-                            </div>
-                            <div class="text-center">
-                                <h4 class="fw-bold mb-0" style="color: #8b4513;"><span id="coopsCount">0</span>+</h4>
-                                <small class="text-muted">Cooperatives</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-5 mt-5 mt-lg-0">
-                        <div class="position-relative" style="height: 450px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
-                            <!-- Video Background -->
-                            <video autoplay muted loop playsinline class="w-100 h-100" style="object-fit: cover; position: absolute; inset: 0;" poster="Coffee_farm_Kenya_202604102333.jpeg">
-                                <source src="79636-570129416.mp4" type="video/mp4">
-                            </video>
-                            
-                            <!-- Gradient Overlay for readability -->
-                            <div style="position: absolute; inset: 0; background: linear-gradient(135deg, rgba(139,69,19,0.15) 0%, transparent 40%, rgba(0,0,0,0.3) 100%); z-index: 2; pointer-events: none;"></div>
-                            
-                            <!-- Floating Cards with Animation -->
-                            <div class="position-absolute bg-white p-3 rounded-3 shadow-sm" style="bottom: 30px; left: -20px; border-left: 3px solid #8b4513; z-index: 3; animation: float 3s ease-in-out infinite;">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-shield-check fs-4" style="color: #8b4513;"></i>
-                                    <span class="fw-medium ms-2">EUDR Verified</span>
+                            <div class="hero-features mb-4">
+                                <div class="feature-item">
+                                    <i class="bi bi-check-circle-fill" style="color: #8b4513;"></i>
+                                    <span>GPS Farm Mapping & Boundary Tracking</span>
                                 </div>
-                            </div>
-                            <div class="position-absolute bg-white p-3 rounded-3 shadow-sm" style="top: 30px; right: -20px; border-left: 3px solid #8b4513; z-index: 3; animation: float 3s ease-in-out infinite; animation-delay: 1.5s;">
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-globe fs-4" style="color: #8b4513;"></i>
-                                    <span class="fw-medium ms-2">Global Compliance</span>
+                                <div class="feature-item">
+                                    <i class="bi bi-check-circle-fill" style="color: #8b4513;"></i>
+                                    <span>Automated EUDR Compliance Reports</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="bi bi-check-circle-fill" style="color: #8b4513;"></i>
+                                    <span>Real-time Production Monitoring</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="bi bi-check-circle-fill" style="color: #8b4513;"></i>
+                                    <span>Cooperative Management Tools</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- How It Works - Modern Process Flow -->
-        <section id="how-it-works" class="py-5" style="background: linear-gradient(180deg, #fff 0%, #faf8f5 100%);">
-            <div class="container">
-                <div class="text-center mb-5">
-                    <h2 class="fw-bold mb-3">How It Works</h2>
-                    <p class="text-muted">Three things Plotra does</p>
-                </div>
-                
-                <div class="row g-4 justify-content-center">
-                    <!-- Step 1 -->
-                    <div class="col-md-4">
-                        <div class="process-card text-center h-100 p-4" style="background: white; border-radius: 20px; border: 2px solid transparent; transition: all 0.4s ease; position: relative;">
-                            <div class="process-number mx-auto mb-4" style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b4513 0%, #6f4e37 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(139,69,19,0.3);">
-                                <i class="bi bi-map-fill text-white fs-2"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Structures land first</h4>
-                            <p class="text-muted mb-0">Every farm is mapped as a parcel. All records — deliveries, documents, compliance data — are anchored to that parcel identity. This is what makes traceability verifiable.</p>
-                            <div class="process-arrow d-none d-md-block" style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%); z-index: 1;">
-                                <i class="bi bi-arrow-right-circle-fill fs-2" style="color: #8b4513;"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Step 2 -->
-                    <div class="col-md-4">
-                        <div class="process-card text-center h-100 p-4" style="background: white; border-radius: 20px; border: 2px solid transparent; transition: all 0.4s ease; position: relative;">
-                            <div class="process-number mx-auto mb-4" style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b4513 0%, #6f4e37 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(139,69,19,0.3);">
-                                <i class="bi bi-layers-fill text-white fs-2"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Verifies in layers</h4>
-                            <p class="text-muted mb-0">Field-captured data passes through cooperative review, geospatial analysis, and system-level quality checks. Each layer builds on the last.</p>
-                            <div class="process-arrow d-none d-md-block" style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%); z-index: 1;">
-                                <i class="bi bi-arrow-right-circle-fill fs-2" style="color: #8b4513;"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Step 3 -->
-                    <div class="col-md-4">
-                        <div class="process-card text-center h-100 p-4" style="background: white; border-radius: 20px; border: 2px solid transparent; transition: all 0.4s ease; position: relative;">
-                            <div class="process-number mx-auto mb-4" style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b4513 0%, #6f4e37 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(139,69,19,0.3);">
-                                <i class="bi bi-arrow-repeat text-white fs-2"></i>
-                            </div>
-                            <h4 class="fw-bold mb-3">Corrects rather than rejects</h4>
-                            <p class="text-muted mb-0">When gaps arise, Plotra opens a structured rectification process. Records are corrected, re-linked, and completed — without discarding valid data.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- For Importers -->
-        <section id="importers" class="py-5">
-            <div class="container">
-                <div class="row align-items-center">
                     <div class="col-lg-6">
-                        <h2 class="fw-bold mb-3">For Importers</h2>
-                        <h4 class="text-muted mb-4">Compliance you can rely on — built for real supply chains</h4>
-                        <p class="text-muted mb-4">EUDR compliance requires more than documentation. It requires a clear, verifiable link between a commodity and the land it came from — supported by auditable records and consistent data structures.</p>
-                        
-                        <div class="p-3 mb-3" style="background: #f4ece1; border-radius: 12px; border-left: 4px solid #8b4513;">
-                            <p class="mb-0"><strong>If your suppliers have no structured data:</strong> Plotra builds it from the ground up — farmer and parcel registration, geospatial mapping, polygon validation, satellite-supported verification, cooperative validation workflows, and DDS-ready outputs.</p>
-                        </div>
-                        
-                        <div class="p-3 mb-3" style="background: #f4ece1; border-radius: 12px; border-left: 4px solid #8b4513;">
-                            <p class="mb-0"><strong>If you already receive geolocation data:</strong> Plotra provides a structured intake and validation layer. Geodata is normalised, documents are linked, inconsistencies are resolved, and DDS-ready outputs are generated.</p>
-                        </div>
-                        
-                        <div class="p-3 mb-4" style="background: #f4ece1; border-radius: 12px; border-left: 4px solid #8b4513;">
-                            <p class="mb-0"><strong>If you need geospatial analysis only:</strong> Plotra can assess existing polygon data — validating structure, checking deforestation-free status, and identifying boundary issues.</p>
-                        </div>
-                        
-                        <h5 class="fw-bold mb-3">Why Plotra is Different</h5>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-coffee me-2"></i><strong>Parcel-first architecture</strong> — compliance is anchored in land identity</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-coffee me-2"></i><strong>Rectification workflows</strong> — errors are structured and corrected, not rejected</li>
-                            <li class="mb-0"><i class="bi bi-check-circle-fill text-coffee me-2"></i><strong>Climate-aware interpretation</strong> — agroforestry and intercropping systems are interpreted over time</li>
-                        </ul>
-                    </div>
-                    <div class="col-lg-5 offset-lg-1 mt-5 mt-lg-0">
-                        <div class="bg-light rounded-4 d-flex align-items-center justify-content-center" style="min-height: 400px; border: 2px dashed #ccc;">
-                            <span class="text-muted">[For Importers Image - Add image here]</span>
+                        <div class="hero-image">
+                            <div class="image-caption mb-3">
+                                <p class="text-muted mb-0">Beautiful coffee farms connecting tradition with technology</p>
+                            </div>
+                            <img src="change_terracafe_to_202604042154.png" alt="Coffee Farm" class="img-fluid">
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Data You Can Rely On -->
-        <section class="py-5 bg-light">
+        <!-- Features Section -->
+        <section class="features-section">
             <div class="container">
-                <div class="row align-items-center">
-                    <div class="col-lg-5">
-                        <div class="bg-light rounded-4 d-flex align-items-center justify-content-center" style="min-height: 300px; border: 2px dashed #ccc;">
-                            <span class="text-muted">[Data Image - Add image here]</span>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 offset-lg-1 mt-5 mt-lg-0">
-                        <h2 class="fw-bold mb-3">Data You Can Rely On</h2>
-                        <p class="text-muted">Plotra provides importers with access to structured compliance records through a dedicated interface — parcel-linked datasets, linked documentation, DDS-ready submissions, and audit logs — so records remain accessible for future use, regulatory audits, and continuity across reporting cycles.</p>
+                <div class="row text-center mb-5">
+                    <div class="col-12">
+                        <h3 class="section-title">Your Complete Coffee Farming Journey</h3>
+                        <p class="section-subtitle">From mapping your first farm to delivering premium coffee to global markets, Plotra guides you through every step of sustainable coffee production with integrated tools and real-time insights.</p>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- For Cooperatives -->
-        <section id="cooperatives" class="py-5">
-            <div class="container">
-                <div class="row align-items-center">
-                    <div class="col-lg-6">
-                        <h2 class="fw-bold mb-3">For Cooperatives & Exporters</h2>
-                        <h4 class="text-muted mb-4">Making smallholder trade legible</h4>
-                        <p class="text-muted mb-4">Plotra is built for the realities of smallholder agriculture — fragmented plots, shared boundaries, customary tenure, and agroforestry systems where multiple crops grow under a single canopy. These are not exceptions. They are the norm.</p>
-                        <p class="text-muted mb-4">When compliance systems fail to account for this complexity, valid farms appear incomplete and producers risk exclusion — not because of wrongdoing, but because their reality does not fit simplified models.</p>
-                        
-                        <h5 class="fw-bold mb-3">What It Means in Practice</h5>
-                        <ul class="list-unstyled mb-4">
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-coffee me-2"></i>Each farm is mapped as a parcel with a clear identity</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-coffee me-2"></i>Production data is linked to that parcel and verified through cooperative review</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-coffee me-2"></i>Issues are corrected through structured rectification, not rejected</li>
-                            <li class="mb-0"><i class="bi bi-check-circle-fill text-coffee me-2"></i>Compliance outputs are generated in EUDR-compatible formats</li>
-                        </ul>
-                    </div>
-                    <div class="col-lg-5 offset-lg-1 mt-5 mt-lg-0">
-                        <div class="bg-light rounded-4 d-flex align-items-center justify-content-center" style="min-height: 400px; border: 2px dashed #ccc;">
-                            <span class="text-muted">[Cooperatives Image - Add image here]</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- Data Governance -->
-        <section id="governance" class="py-5" style="background: linear-gradient(180deg, #faf8f5 0%, #f5f0e8 100%);">
-            <div class="container">
-                <div class="text-center mb-5">
-                    <h2 class="fw-bold mb-3">Data Governance</h2>
-                    <p class="text-muted">Plotra Data Principles</p>
-                </div>
-                
-                <div class="p-4 mb-5" style="background: #8b4513; border-radius: 16px; border-left: 5px solid #6f4e37;">
-                    <p class="mb-0 fw-bold text-white" style="font-size: 1.1rem;">Data should support participation in trade — not create dependency or extraction.</p>
-                </div>
-                
-                <div class="row g-4">
-                    <div class="col-md-6 col-lg-4">
-                        <div class="governance-card h-100 p-4" style="background: white; border-radius: 16px; border: 2px solid transparent; transition: all 0.3s ease;">
-                            <div class="governance-icon mb-3" style="width: 50px; height: 50px; background: linear-gradient(135deg, #f4ece1 0%, #e8dcc8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-bullseye fs-4" style="color: #8b4513;"></i>
-                            </div>
-                            <h5 class="fw-bold mb-3">Purpose-Limited Data Use</h5>
-                            <p class="text-muted mb-0">Data is collected and used only for supply-chain functions including EUDR compliance, traceability, and value attribution. It is not used for profiling, advertising, or resale.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="governance-card h-100 p-4" style="background: white; border-radius: 16px; border: 2px solid transparent; transition: all 0.3s ease;">
-                            <div class="governance-icon mb-3" style="width: 50px; height: 50px; background: linear-gradient(135deg, #f4ece1 0%, #e8dcc8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-people fs-4" style="color: #8b4513;"></i>
-                            </div>
-                            <h5 class="fw-bold mb-3">Farmer and Cooperative Access</h5>
-                            <p class="text-muted mb-0">Farmers and cooperatives retain access to parcel-linked data. Records can be retrieved and exported in standard formats for use across buyers and markets.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="governance-card h-100 p-4" style="background: white; border-radius: 16px; border: 2px solid transparent; transition: all 0.3s ease;">
-                            <div class="governance-icon mb-3" style="width: 50px; height: 50px; background: linear-gradient(135deg, #f4ece1 0%, #e8dcc8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-shield-x fs-4" style="color: #8b4513;"></i>
-                            </div>
-                            <h5 class="fw-bold mb-3">No Extractive Data Practices</h5>
-                            <p class="text-muted mb-0">Data generated within Plotra is not bundled, resold, or converted into standalone commercial datasets. It remains linked to the supply-chain context.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="governance-card h-100 p-4" style="background: white; border-radius: 16px; border: 2px solid transparent; transition: all 0.3s ease;">
-                            <div class="governance-icon mb-3" style="width: 50px; height: 50px; background: linear-gradient(135deg, #f4ece1 0%, #e8dcc8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-arrow-repeat fs-4" style="color: #8b4513;"></i>
-                            </div>
-                            <h5 class="fw-bold mb-3">Interoperability</h5>
-                            <p class="text-muted mb-0">Standard data formats allow compliance datasets and parcel records to be shared across regulatory, commercial, and cooperative systems.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="governance-card h-100 p-4" style="background: white; border-radius: 16px; border: 2px solid transparent; transition: all 0.3s ease;">
-                            <div class="governance-icon mb-3" style="width: 50px; height: 50px; background: linear-gradient(135deg, #f4ece1 0%, #e8dcc8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-file-earmark-text fs-4" style="color: #8b4513;"></i>
-                            </div>
-                            <h5 class="fw-bold mb-3">Transparent System Logic</h5>
-                            <p class="text-muted mb-0">Compliance workflows and validation logic are versioned and auditable. Decisions affecting compliance status remain traceable over time.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="governance-card h-100 p-4" style="background: white; border-radius: 16px; border: 2px solid transparent; transition: all 0.3s ease;">
-                            <div class="governance-icon mb-3" style="width: 50px; height: 50px; background: linear-gradient(135deg, #f4ece1 0%, #e8dcc8 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-lock fs-4" style="color: #8b4513;"></i>
-                            </div>
-                            <h5 class="fw-bold mb-3">Privacy and Security</h5>
-                            <p class="text-muted mb-0">Personal data is processed in accordance with GDPR — including data minimisation, role-based access controls, and secure storage practices.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-5">
-                    <div class="governance-card border-0 p-4" style="background: white; border-radius: 16px; max-width: 700px; margin: 0 auto; border: 2px solid transparent; transition: all 0.3s ease;">
-                        <h5 class="fw-bold text-center mb-3">Data Sovereignty</h5>
-                        <p class="text-muted text-center mb-3">Farmers and cooperatives retain visibility and functional access to their data. Participation in Plotra does not restrict future market relationships.</p>
-                        <ul class="list-unstyled text-center">
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-coffee me-2"></i>Your data supports your access to market</li>
-                            <li class="mb-2"><i class="bi bi-check-circle-fill text-coffee me-2"></i>Your records remain usable across buyers</li>
-                            <li><i class="bi bi-check-circle-fill text-coffee me-2"></i>Your participation does not lock you into a single system</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- About -->
-        <section id="about" class="py-5">
-            <div class="container">
-                <div class="row align-items-center">
-                    <div class="col-lg-5">
-                        <div class="bg-light rounded-4 d-flex align-items-center justify-content-center" style="min-height: 350px; border: 2px dashed #ccc;">
-                            <span class="text-muted">[About Image - Add image here]</span>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 offset-lg-1 mt-5 mt-lg-0">
-                        <h2 class="fw-bold mb-3">About Plotra</h2>
-                        <p class="text-muted mb-3">Plotra is the operational infrastructure behind Terraxis' compliance and traceability services.</p>
-                        <p class="text-muted mb-3">It is the system through which land is mapped, data is structured, verification is applied, and compliance outputs are generated.</p>
-                        <p class="text-muted mb-3">It is designed to absorb complexity — not eliminate it. Fragmented land, layered tenure, mixed production systems, and incomplete data are not treated as problems to be filtered out. They are structured into verifiable, auditable records.</p>
-                        <p class="text-muted mb-4">Plotra is currently in active deployment through the Kenya pilot programme.</p>
-                        
-                        <h5 class="fw-bold mb-3">Built on Open Standards</h5>
-                        <p class="text-muted mb-0">Plotra is designed in alignment with Digital Public Goods principles — focused on interoperability, transparency, and avoiding black-box dependency. The infrastructure is structured to remain legible and portable across systems.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- CTA Section -->
-        <section class="bg-coffee" style="color: white; padding: 80px 0;">
-            <div class="container text-center">
-                <h2 class="fw-bold mb-3" style="font-size: 2.5rem;">Ready to get started?</h2>
-                <p class="mb-4" style="font-size: 1.15rem; opacity: 0.9;">Join the Plotra network and build compliant, traceable supply chains.</p>
-                <div class="d-flex gap-3 justify-content-center flex-wrap">
-                    <a href="#" class="btn btn-light btn-lg px-5 py-3 fw-bold text-dark" onclick="window.app?.showRegisterModal()">Request a Quotation</a>
-                    <a href="#" class="btn btn-outline-light btn-lg px-5 py-3" onclick="window.app?.showLoginModal()">Contact Us</a>
-                </div>
             </div>
         </section>
 
@@ -2031,33 +1104,20 @@
     <!-- Login Modal -->
     <div class="modal fade auth-modal" id="loginModal" data-bs-backdrop="static" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
-            <div class="modal-content border-0 shadow-lg" style="border: 1px solid #6f4e37 !important; border-top-width: 6px !important;">
-                <div class="modal-body px-5 py-4 position-relative">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body px-5 py-5 position-relative">
                     <button type="button" class="btn-close modal-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
-                    <div class="mb-3 text-center">
-                        <img src="Logo_for_coffee_202604042330.jpeg" alt="Plotra Logo" style="height: 32px; margin-bottom: 16px;">
+                    <div class="mb-4 text-center">
+                        <img src="Logo_for_coffee_202604042330.jpeg" alt="Plotra Logo" style="height: 32px; margin-bottom: 20px;">
                     </div>
 
                     <form id="loginForm" novalidate>
-                        <!-- Login Step 1: Phone -->
+                        <!-- Login Step 1: Email -->
                         <div id="loginStep1" class="step-content active text-center">
                             <h4 class="fw-bold mb-1" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">Get Started</h4>
                             <p class="mb-4" style="color: #6f4e37; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">to continue to Plotra</p>
                             <div class="mb-4">
-<div class="phone-input-wrapper" style="max-width: 100%;">
-                                    <div class="input-group phone-input-group" style="position: relative;">
-                                        <input type="hidden" id="loginCountryCodeSelect" value="+254">
-                                        <button type="button" class="country-dropdown-btn" id="loginCountryBtn" onclick="toggleCountryDropdown('loginCountryBtn', 'loginCountryMenu')">
-                                            <span class="fi fi-ke fis"></span> Kenya (+254) <span class="caret">▼</span>
-                                        </button>
-                                        <div class="country-dropdown-menu" id="loginCountryMenu">
-                                            <div class="country-option" data-value="+254" data-flag="ke"><span class="fi fi-ke fis"></span> Kenya (+254)</div>
-                                            <div class="country-option" data-value="+255" data-flag="tz"><span class="fi fi-tz fis"></span> Tanzania (+255)</div>
-                                            <div class="country-option" data-value="+256" data-flag="ug"><span class="fi fi-ug fis"></span> Uganda (+256)</div>
-                                        </div>
-                                        <input type="tel" class="form-control phone-input-with-code" id="loginPhone" name="phone" placeholder="712345678" pattern="[0-9]{9}" maxlength="9" required>
-                                </div>
-                                </div>
+                                <input type="email" class="form-control" id="loginEmail" name="email" placeholder="Email" required>
                             </div>
                             <div class="mb-4 x-small-text text-center">
                                 New to Plotra? <a href="javascript:void(0)" onclick="app.showRegisterModal()" class="text-decoration-none fw-medium" style="color: #6f4e37;">Join Our Community</a>
@@ -2074,7 +1134,7 @@
                                 <button type="button" class="btn btn-link p-0 text-dark me-2" id="btnBackLogin">
                                     <i class="bi bi-arrow-left fs-5"></i>
                                 </button>
-                                <span id="displayLoginPhone" class="text-muted"></span>
+                                <span id="displayLoginEmail" class="text-muted"></span>
                             </div>
                             <h4 class="fw-bold mb-4">Enter password</h4>
                             <div class="mb-3 position-relative">
@@ -2138,11 +1198,11 @@
     <!-- Registration Modal -->
     <div class="modal fade auth-modal" id="registerModal" data-bs-backdrop="static" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
-            <div class="modal-content border-0 shadow-lg" style="border: 1px solid #6f4e37 !important; border-top-width: 6px !important;">
-                <div class="modal-body px-5 py-4 position-relative">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body px-5 py-5 position-relative">
                     <button type="button" class="btn-close modal-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
-                    <div class="mb-3 text-center">
-                        <img src="Logo_for_coffee_202604042330.jpeg" alt="Plotra Logo" style="height: 32px; margin-bottom: 16px;">
+                    <div class="mb-4 text-center">
+                        <img src="Logo_for_coffee_202604042330.jpeg" alt="Plotra Logo" style="height: 32px; margin-bottom: 20px;">
                     </div>
 
                     <form id="registerForm" novalidate>
@@ -2156,25 +1216,10 @@
                                 <input type="text" class="form-control" id="regLastName" name="last_name" placeholder="Last Name" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold text-start d-block" style="color: #6f4e37;">Phone Number</label>
-<div class="phone-input-wrapper" style="max-width: 100%;">
-                                    <div class="input-group phone-input-group" style="position: relative;">
-                                        <input type="hidden" id="regCountryCodeSelect" value="+254">
-                                        <button type="button" class="country-dropdown-btn" id="regCountryBtn" onclick="toggleCountryDropdown('regCountryBtn', 'regCountryMenu')">
-                                            <span class="fi fi-ke fis"></span> Kenya (+254) <span class="caret">▼</span>
-                                        </button>
-                                        <div class="country-dropdown-menu" id="regCountryMenu">
-                                            <div class="country-option" data-value="+254" data-flag="ke"><span class="fi fi-ke fis"></span> Kenya (+254)</div>
-                                            <div class="country-option" data-value="+255" data-flag="tz"><span class="fi fi-tz fis"></span> Tanzania (+255)</div>
-                                            <div class="country-option" data-value="+256" data-flag="ug"><span class="fi fi-ug fis"></span> Uganda (+256)</div>
-                                        </div>
-                                        <input type="tel" class="form-control phone-input-with-code" id="regPhone" name="phone" placeholder="712345678" pattern="[0-9]{9}" maxlength="9">
-                                </div>
-                                </div>
-                                <small class="text-muted" style="font-size: 0.75rem;">9 digits, no leading 0</small>
+                                <input type="tel" class="form-control" id="regPhone" name="phone" placeholder="Telephone">
                             </div>
                             <div class="mb-4">
-                                <input type="email" class="form-control" id="regEmail" name="email" placeholder="Email (optional)">
+                                <input type="email" class="form-control" id="regEmail" name="email" placeholder="someone@example.com">
                             </div>
                             <div class="d-flex justify-content-center mt-3 gap-2">
                                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="app.showLoginModal()" style="color: #6f4e37; border-color: #6f4e37; height: 36px; line-height: 1.4; width: 110px;">Get Started</button>
@@ -2240,11 +1285,6 @@
                             <div class="mb-3">
                                 <input type="text" class="form-control" id="regIdNumber" name="id_number" placeholder="ID Number">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Passport Photo (Optional)</label>
-                                <input type="file" class="form-control" id="regPassportPhoto" name="passport_photo" accept="image/*">
-                                <small class="text-muted">Upload your passport photo for verification</small>
-                            </div>
                             <div class="d-flex justify-content-center mt-4">
                                 <button type="button" class="btn btn-primary px-4 py-2" id="btnNextReg3" style="min-width: 120px;">Next</button>
                             </div>
@@ -2271,16 +1311,12 @@
                                     <i class="bi bi-eye" id="regConfirmPasswordToggle"></i>
                                 </button>
                             </div>
-                            <div class="mb-3" style="text-align: left !important; width: 100% !important;">
-    <div class="d-flex align-items-center" style="gap: 8px; justify-content: flex-start !important;">
-        <input type="checkbox" class="terms-checkbox" id="regTermsFinal" name="terms_final" required style="margin: 0 !important; width: 18px !important; height: 18px !important; flex-shrink: 0 !important;">
-        <label class="small mb-0" for="regTermsFinal" style="color: #212529; cursor: pointer; text-align: left !important; white-space: nowrap !important;">
-            I agree to the <a href="#" class="text-decoration-none" style="color: #6f4e37;">Terms of Use</a>
-        </label>
-    </div>
-</div>
-
-
+                            <div class="mb-4 form-check mt-3">
+                                <input type="checkbox" class="form-check-input" id="regTermsFinal" name="terms_final" required>
+                                <label class="form-check-label small" for="regTermsFinal">
+                                    I agree to the <a href="#" class="text-decoration-none" style="color: #6f4e37;">Terms of Use</a>
+                                </label>
+                            </div>
                             <div class="d-flex justify-content-center mt-4">
                                 <button type="submit" class="btn btn-primary px-4 py-2" style="min-width: 120px;">Finish</button>
                             </div>
@@ -2291,475 +1327,73 @@
         </div>
     </div>
 
-    <!-- Phone Verification Modal -->
-    <div class="modal fade auth-modal" id="phoneVerifyModal" data-bs-backdrop="static" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
-            <div class="modal-content border-0 shadow-lg" style="border: 1px solid #6f4e37 !important; border-top-width: 6px !important;">
-                <div class="modal-body px-5 py-4 position-relative">
-                    <button type="button" class="btn-close modal-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
-                    <div class="mb-3 text-center">
-                        <img src="Logo_for_coffee_202604042330.jpeg" alt="Plotra Logo" style="height: 32px; margin-bottom: 16px;">
-                    </div>
-
-                    <!-- Step 1: Enter Phone Number -->
-                    <div id="phoneVerifyStep1" class="step-content active text-center">
-                        <h2 class="fw-bold mb-2" style="color: #1a1a2e; font-size: 1.5rem;">Verify Phone Number</h2>
-                        <p class="text-muted mb-3 small">We'll send a verification code to your phone</p>
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-start d-block" style="color: #6f4e37;">Phone Number</label>
-<div class="phone-input-wrapper" style="max-width: 100%;">
-                                <div class="input-group phone-input-group" style="position: relative;">
-                                        <input type="hidden" id="verifyCountryCodeSelect" value="+254">
-                                        <button type="button" class="country-dropdown-btn" id="verifyCountryBtn" onclick="toggleCountryDropdown('verifyCountryBtn', 'verifyCountryMenu')">
-                                            <span class="fi fi-ke fis"></span> Kenya (+254) <span class="caret">▼</span>
-                                        </button>
-                                        <div class="country-dropdown-menu" id="verifyCountryMenu">
-                                            <div class="country-option" data-value="+254" data-flag="ke"><span class="fi fi-ke fis"></span> Kenya (+254)</div>
-                                            <div class="country-option" data-value="+255" data-flag="tz"><span class="fi fi-tz fis"></span> Tanzania (+255)</div>
-                                            <div class="country-option" data-value="+256" data-flag="ug"><span class="fi fi-ug fis"></span> Uganda (+256)</div>
-                                        </div>
-                                    <input type="tel" class="form-control phone-input-with-code" id="verifyPhoneNumber" placeholder="712345678" pattern="[0-9]{9}" maxlength="9">
-                                </div>
-                                </div>
-                                <small class="text-muted d-block text-start" style="font-size: 0.75rem;">9 digits, no leading 0</small>
-                        </div>
-                        
-                        <div class="d-flex justify-content-center mt-4">
-                            <button type="button" class="btn btn-primary px-4 py-2" id="btnSendOTP" style="min-width: 140px;">Send Code</button>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: Enter OTP -->
-                    <div id="phoneVerifyStep2" class="step-content">
-                        <div class="d-flex align-items-center mb-3">
-                            <button type="button" class="btn btn-link p-0 text-dark me-2" onclick="showPhoneVerifyStep1()">
-                                <i class="bi bi-arrow-left fs-5"></i>
-                            </button>
-                            <span class="text-muted small">Enter code</span>
-                        </div>
-                        <h2 class="fw-bold mb-2" style="color: #1a1a2e; font-size: 1.5rem;">Enter Verification Code</h2>
-                        <p class="text-muted mb-3 small">We sent a code to <span id="maskedPhone"></span></p>
-                        
-                        <div class="mb-3">
-                            <input type="text" class="form-control text-center fs-4" id="verifyOTP" placeholder="000000" maxlength="6" style="letter-spacing: 8px;">
-                            <small class="text-muted">Enter the 6-digit code</small>
-                        </div>
-                        
-                        <div class="mb-3 text-center">
-                            <button type="button" class="btn btn-link text-decoration-none" style="color: #6f4e37;" onclick="resendOTP()">
-                                Didn't receive? Resend code
-                            </button>
-                        </div>
-                        
-                        <div class="d-flex justify-content-center mt-3">
-                            <button type="button" class="btn btn-primary px-4 py-2" id="btnVerifyOTP" style="min-width: 140px;">Verify</button>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Verified Success -->
-                    <div id="phoneVerifyStep3" class="step-content">
-                        <div class="text-center">
-                            <div class="mb-3">
-                                <i class="bi bi-check-circle-fill" style="font-size: 64px; color: #28a745;"></i>
-                            </div>
-                            <h2 class="fw-bold mb-2" style="color: #1a1a2e; font-size: 1.5rem;">Phone Verified!</h2>
-                            <p class="text-muted mb-4"><span id="verifiedPhoneDisplay"></span></p>
-                            <button type="button" class="btn btn-primary px-4 py-2" data-bs-dismiss="modal">Continue</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Add Farm Modal -->
     <div class="modal fade" id="addFarmModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-geo-alt"></i> Add New Farm</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <!-- Quick Navigation Tabs -->
-                <div class="modal-header px-3 pt-2 pb-0 bg-light">
-                    <ul class="nav nav-pills" role="tablist">
-                        <li class="nav-item">
-                            <button class="nav-link active" onclick="app.goToFarmStep(1)">
-                                <i class="bi bi-1-circle me-1"></i> Basic (1-5)
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" onclick="app.goToFarmStep(6)">
-                                <i class="bi bi-6-circle me-1"></i> Advanced (6)
-                            </button>
-                        </li>
-                    </ul>
-                </div>
                 <form id="addFarmForm">
-                    <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
-                        <!-- Step Wizard Progress -->
-                        <div class="step-wizard mb-4">
-                            <ul class="step-tabs d-flex justify-content-between list-unstyled mb-0" id="farmStepTabs">
-                                <li class="step-item active" data-step="1">
-                                    <div class="step-circle">1</div>
-                                    <div class="step-label">Farmer</div>
-                                </li>
-                                <li class="step-item" data-step="2">
-                                    <div class="step-circle">2</div>
-                                    <div class="step-label">Farm</div>
-                                </li>
-                                <li class="step-item" data-step="3">
-                                    <div class="step-circle">3</div>
-                                    <div class="step-label">Coffee</div>
-                                </li>
-                                <li class="step-item" data-step="4">
-                                    <div class="step-circle">4</div>
-                                    <div class="step-label">GPS</div>
-                                </li>
-                                <li class="step-item" data-step="5">
-                                    <div class="step-circle">5</div>
-                                    <div class="step-label">Review</div>
-                                </li>
-                                <li class="step-item" data-step="6">
-                                    <div class="step-circle">6</div>
-                                    <div class="step-label">Advanced</div>
-                                </li>
-                            </ul>
-                            <div class="step-progress">
-                                <div class="step-progress-bar" id="farmStepProgress" style="width: 16.6%;"></div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Farm Name *</label>
+                                <input type="text" class="form-control" id="farmName" required>
                             </div>
-                        </div>
-
-<!-- Step Panels -->
-                        <div class="step-content" id="farmStepContent">
-                            <!-- STEP 1: Farmer Identity -->
-                            <div class="step-pane active" data-step="1">
-                                <h6 class="text-primary fw-bold border-bottom pb-2 mb-3">
-                                    <i class="bi bi-person me-2"></i>Farmer Identity
-                                </h6>
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Full Name *</label>
-                                        <input type="text" class="form-control" id="farmerFullName" required placeholder="First and last name">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Phone Number *</label>
-                                        <input type="tel" class="form-control" id="farmerPhone" required placeholder="M-Pesa number">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">National ID Number *</label>
-                                        <input type="text" class="form-control" id="farmerNationalId" required placeholder="ID number (SHA-256 stored)">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Passport Photo</label>
-                                        <input type="file" class="form-control" id="farmerPassportPhoto" accept="image/*">
-                                        <small class="text-muted">Upload passport-style photo</small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Gender *</label>
-                                        <select class="form-select" id="farmerGender" required>
-                                            <option value="">Select Gender</option>
-                                            <option value="M">Male</option>
-                                            <option value="F">Female</option>
-                                            <option value="Other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Membership Number *</label>
-                                        <input type="text" class="form-control" id="membershipNumber" readonly placeholder="PCF/2026/0001">
-                                        <small class="text-muted">Auto-generated</small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Data Consent *</label>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="dataConsent" required>
-                                            <label class="form-check-label" for="dataConsent">I consent to data collection</label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Step Navigation -->
-                                <div class="step-nav mt-4">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-primary" onclick="app.goToFarmStep(2)">
-                                        Next <i class="bi bi-arrow-right ms-1"></i>
-                                    </button>
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Total Area (Hectares) *</label>
+                                <input type="number" class="form-control" id="farmArea" step="0.01" required>
                             </div>
-
-                            <!-- STEP 2: Farm Details -->
-                            <div class="step-pane" data-step="2">
-                                <h6 class="text-primary fw-bold border-bottom pb-2 mb-3">
-                                    <i class="bi bi-house me-2"></i>Farm Details
-                                </h6>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Parcel ID *</label>
-                                        <input type="text" class="form-control" id="parcelId" readonly placeholder="PTP/2026/001">
-                                        <small class="text-muted">Auto-generated</small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Farm Name *</label>
-                                        <input type="text" class="form-control" id="farmName" required placeholder="What the farmer calls the plot">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Location *</label>
-                                        <input type="text" class="form-control" id="farmLocation" required placeholder="Sub-county or village">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Farm Size (ha) *</label>
-                                        <input type="number" class="form-control" id="farmArea" step="0.01" required placeholder="Farmer's estimate">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Land Ownership *</label>
-                                        <select class="form-select" id="landOwnershipType" required>
-                                            <option value="">Select Type</option>
-                                            <option value="owned">Title Deed</option>
-                                            <option value="leased">Lease Agreement</option>
-                                            <option value="family">Family Plot</option>
-                                            <option value="customary">Customary Tenure</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <!-- Step Navigation -->
-                                <div class="step-nav mt-4">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="app.goToFarmStep(1)">
-                                        <i class="bi bi-arrow-left me-1"></i> Back
-                                    </button>
-                                    <button type="button" class="btn btn-primary" onclick="app.goToFarmStep(3)">
-                                        Next <i class="bi bi-arrow-right ms-1"></i>
-                                    </button>
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Coffee Varieties (comma separated)</label>
+                                <input type="text" class="form-control" id="farmVarieties" placeholder="e.g., SL28, Batian, Ruiru 11">
                             </div>
-
-                            <!-- STEP 3: Coffee Production -->
-                            <div class="step-pane" data-step="3">
-                                <h6 class="text-primary fw-bold border-bottom pb-2 mb-3">
-                                    <i class="bi bi-cup-hot me-2"></i>Coffee Production
-                                </h6>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Primary Crop *</label>
-                                        <input type="text" class="form-control" id="primaryCrop" value="Coffee" readonly>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Coffee Variety *</label>
-                                        <select class="form-select" id="coffeeVariety" required>
-                                            <option value="">Select Variety</option>
-                                            <option value="Ruiru_11">Ruiru 11</option>
-                                            <option value="Batian">Batian</option>
-                                            <option value="SL28">SL28</option>
-                                            <option value="SL34">SL34</option>
-                                            <option value="Other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Estimated Annual Yield (kg) *</label>
-                                        <input type="number" class="form-control" id="estimatedYield" required placeholder="Last full season">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Farming Method *</label>
-                                        <select class="form-select" id="farmingMethod" required>
-                                            <option value="">Select Method</option>
-                                            <option value="monocrop">Monocrop</option>
-                                            <option value="mixed">Mixed Crop</option>
-                                            <option value="agroforestry">Agroforestry</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <!-- Step Navigation -->
-                                <div class="step-nav mt-4">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="app.goToFarmStep(2)">
-                                        <i class="bi bi-arrow-left me-1"></i> Back
-                                    </button>
-                                    <button type="button" class="btn btn-primary" onclick="app.goToFarmStep(4)">
-                                        Next <i class="bi bi-arrow-right ms-1"></i>
-                                    </button>
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Years of Farming</label>
+                                <input type="number" class="form-control" id="farmYears" min="0">
                             </div>
-
-                            <!-- STEP 4: GPS Polygon -->
-                            <div class="step-pane" data-step="4">
-                                <h6 class="text-primary fw-bold border-bottom pb-2 mb-3">
-                                    <i class="bi bi-geo-alt me-2"></i>GPS Polygon <span class="badge bg-secondary">Optional</span>
-                                </h6>
-                                <div class="alert alert-info mb-2">
-                                    <i class="bi bi-info-circle me-2"></i>GPS capture is optional. You can create the farm first and capture the polygon later.
-                                </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Avg. Annual Production (kg)</label>
+                                <input type="number" class="form-control" id="farmProduction" step="0.1">
+                            </div>
+                                <div class="col-12">
+                                <label class="form-label">Farm Boundary</label>
                                 <div class="card">
                                     <div class="card-body p-0">
-                                        <div id="farmMapStep" style="height: 250px; width: 100%;"></div>
+                                        <div id="farmMap" style="height: 300px; width: 100%;"></div>
                                         <div class="p-3 bg-light">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="text-sm text-muted">GPS Accuracy: <span id="gpsAccuracyStep">--</span>m</span>
-                                                <span class="text-sm text-muted">Points: <span id="pointCountStep">0</span></span>
+                                                <span class="text-sm text-muted">GPS Accuracy: <span id="gpsAccuracy">--</span>m</span>
+                                                <span class="text-sm text-muted">Points: <span id="pointCount">0</span></span>
                                             </div>
-                                            <div class="d-flex gap-2 flex-wrap">
-                                                <button type="button" class="btn btn-sm btn-primary" id="startCaptureBtnStep">
+                                            <div class="d-flex gap-2">
+                                                <button type="button" class="btn btn-sm btn-primary" id="startCaptureBtn">
                                                     <i class="bi bi-geo-alt"></i> Start Capture
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-success" id="addPointBtnStep" disabled>
+                                                <button type="button" class="btn btn-sm btn-success" id="addPointBtn" disabled>
                                                     <i class="bi bi-plus-circle"></i> Add Point
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-warning" id="finishCaptureBtnStep" disabled>
-                                                    <i class="bi bi-check-circle"></i> Done
+                                                <button type="button" class="btn btn-sm btn-warning" id="finishCaptureBtn" disabled>
+                                                    <i class="bi bi-check-circle"></i> Finish
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-danger" id="clearPointsBtnStep" disabled>
+                                                <button type="button" class="btn btn-sm btn-danger" id="clearPointsBtn" disabled>
                                                     <i class="bi bi-trash"></i> Clear
                                                 </button>
                                             </div>
-                                            <div class="mt-2 text-xs text-muted">
-                                                Walk around the farm perimeter and click "Add Point" at each corner. Minimum 4 points.
+                                            <div class="mt-2 text-xs text-muted" id="captureInstructions">
+                                                Click "Start Capture" to begin mapping your farm boundary. Walk around the perimeter and click "Add Point" at each corner.
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mt-3 d-flex align-items-center gap-2">
-                                    <span class="badge bg-secondary" id="polygonStatusStep">No polygon captured</span>
-                                </div>
-                                <!-- Step Navigation -->
-                                <div class="step-nav mt-4">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="app.goToFarmStep(3)">
-                                        <i class="bi bi-arrow-left me-1"></i> Back
-                                    </button>
-                                    <button type="button" class="btn btn-primary" onclick="app.goToFarmStep(5)">
-                                        Review <i class="bi bi-arrow-right ms-1"></i>
-                                    </button>
-                                </div>
                             </div>
-
-                            <!-- STEP 5: Review -->
-                            <div class="step-pane" data-step="4">
-                                <h6 class="text-primary fw-bold border-bottom pb-2 mb-3">
-                                    <i class="bi bi-check-circle me-2"></i>Review & Create Farm
-                                </h6>
-                                <div class="alert alert-success mb-3">
-                                    <i class="bi bi-info-circle me-2"></i>Please review your information before creating the farm.
-                                </div>
-                                <div class="card mb-3">
-                                    <div class="card-body">
-                                        <h6 class="fw-bold">Farmer Information</h6>
-                                        <div id="reviewFarmer" class="row g-2 small"></div>
-                                        <hr>
-                                        <h6 class="fw-bold">Farm Details</h6>
-                                        <div id="reviewFarm" class="row g-2 small"></div>
-                                        <hr>
-                                        <h6 class="fw-bold">Coffee Production</h6>
-                                        <div id="reviewCoffee" class="row g-2 small"></div>
-                                    </div>
-                                </div>
-                                <!-- Step Navigation -->
-                                <div class="step-nav mt-4">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="app.goToFarmStep(3)">
-                                        <i class="bi bi-arrow-left me-1"></i> Back
-                                    </button>
-                                    <button type="button" class="btn btn-outline-info" onclick="app.goToFarmStep(5)">
-                                        <i class="bi bi-plus-circle me-1"></i> Add Advanced
-                                    </button>
-                                    <button type="button" class="btn btn-success btn-lg" id="createFarmBtn">
-                                        <i class="bi bi-check-circle me-2"></i> Create Farm
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- STEP 6: Advanced (Optional) -->
-                            <div class="step-pane" data-step="6">
-                                <h6 class="text-secondary fw-bold border-bottom pb-2 mb-3">
-                                    <i class="bi bi-sliders me-2"></i>Advanced Details <span class="badge bg-secondary">Optional</span>
-                                </h6>
-                                <div class="alert alert-info mb-3">
-                                    <i class="bi bi-info-circle me-2"></i>Add more details to improve your compliance score.
-                                </div>
-                                
-                                <div class="row g-3">
-                                    <div class="col-12"><h6 class="fw-bold">Land Documentation</h6></div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Document Upload</label>
-                                        <input type="file" class="form-control" id="landDocument" accept="image/*,.pdf">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Parent Parcel</label>
-                                        <select class="form-select" id="parentParcel">
-                                            <option value="">Select if any</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="col-12"><h6 class="fw-bold mt-3">Agroforestry</h6></div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Intercropped Species</label>
-                                        <select class="form-select" id="intercroppedSpecies" multiple>
-                                            <option value="avocado">Avocado</option>
-                                            <option value="macadamia">Macadamia</option>
-                                            <option value="banana">Banana</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Shade Trees</label>
-                                        <div class="d-flex gap-2">
-                                            <select class="form-select" id="shadeTrees" style="width: 70px;">
-                                                <option value="no">No</option>
-                                                <option value="yes">Yes</option>
-                                            </select>
-                                            <input type="number" class="form-control" id="canopyCover" placeholder="%" min="0" max="100">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Coffee Trees</label>
-                                        <input type="number" class="form-control" id="coffeePlants" placeholder="Count">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Agroforestry Start Year</label>
-                                        <input type="number" class="form-control" id="agroforestryStartYear" min="1900" max="2030">
-                                    </div>
-                                    
-                                    <div class="col-12"><h6 class="fw-bold mt-3">Practice Log</h6></div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Last Pruning</label>
-                                        <input type="date" class="form-control" id="pruningDate">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Last Harvest</label>
-                                        <input type="date" class="form-control" id="harvestDate">
-                                    </div>
-                                    
-                                    <div class="col-12"><h6 class="fw-bold mt-3">Farm History</h6></div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Year Established</label>
-                                        <input type="number" class="form-control" id="farmEstablishedYear" min="1900" max="2030">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Previous Land Use</label>
-                                        <select class="form-select" id="previousLandUse">
-                                            <option value="">Select</option>
-                                            <option value="forest">Forest</option>
-                                            <option value="pasture">Pasture</option>
-                                            <option value="cropland">Cropland</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Certifications</label>
-                                        <select class="form-select" id="certificationStatus" multiple>
-                                            <option value="rainforest_alliance">Rainforest</option>
-                                            <option value="organic">Organic</option>
-                                            <option value="fairtrade">Fairtrade</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">NGO Support</label>
-                                        <input type="text" class="form-control" id="ngoSupport" placeholder="Programme name">
-                                    </div>
-                                </div>
-                                
-                                <!-- Step Navigation -->
-                                <div class="step-nav mt-4">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="app.goToFarmStep(4)">
-                                        <i class="bi bi-arrow-left me-1"></i> Back
-                                    </button>
-                                    <button type="button" class="btn btn-success btn-lg" id="createFarmWithAdvancedBtn">
-                                        <i class="bi bi-check-circle me-2"></i> Create Farm
-                                    </button>
-</div>
                         </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check"></i> Create Farm</button>
                     </div>
                 </form>
             </div>
@@ -2769,7 +1403,7 @@
     <!-- Add Cooperative Modal -->
     <div class="modal fade" id="addCooperativeModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border: 1px solid #6f4e37 !important; border-top-width: 6px !important;">
+            <div class="modal-content">
                 <div class="modal-header bg-gradient text-center justify-content-center position-relative" style="background: linear-gradient(135deg, #6f4e37 0%, #8b6914 100%);">
                     <h5 class="modal-title text-white w-100"><i class="bi bi-building"></i> Create New Cooperative</h5>
                     <button type="button" class="btn-close btn-close-white position-absolute end-0 me-3" data-bs-dismiss="modal"></button>
@@ -3254,55 +1888,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="openGpsCaptureBtn">
-                        <i class="bi bi-geo-alt"></i> Capture/Update GPS
-                    </button>
                     <button type="button" class="btn btn-danger" id="deleteFarmBtn"><i class="bi bi-trash"></i> Delete</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Full Screen GPS Capture Modal -->
-    <div class="modal fade" id="gpsCaptureModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog modal-fullscreen">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title"><i class="bi bi-geo-alt me-2"></i>GPS Farm Boundary Capture</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div id="gpsCaptureMap" style="height: calc(100vh - 140px); width: 100%;"></div>
-                </div>
-                <div class="modal-footer bg-dark text-white">
-                    <div class="d-flex justify-content-between w-100 align-items-center">
-                        <div>
-                            <span class="badge bg-light text-dark me-2">GPS Accuracy: <span id="gpsCaptureAccuracy">--</span>m</span>
-                            <span class="badge bg-light text-dark">Points: <span id="gpsCapturePoints">0</span></span>
-                            <span class="badge bg-light text-dark ms-2" id="gpsCaptureStatus">Not capturing</span>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-success" id="gpsCaptureStartBtn">
-                                <i class="bi bi-geo-alt"></i> Start
-                            </button>
-                            <button type="button" class="btn btn-warning" id="gpsCaptureAddBtn" disabled>
-                                <i class="bi bi-plus-circle"></i> Add Point
-                            </button>
-                            <button type="button" class="btn btn-info" id="gpsCaptureManualBtn">
-                                <i class="bi bi-cursor"></i> Tap to Add
-                            </button>
-                            <button type="button" class="btn btn-primary" id="gpsCaptureFinishBtn" disabled>
-                                <i class="bi bi-check-circle"></i> Finish
-                            </button>
-                            <button type="button" class="btn btn-danger" id="gpsCaptureClearBtn" disabled>
-                                <i class="bi bi-trash"></i> Clear
-                            </button>
-                            <button type="button" class="btn btn-success" id="gpsCaptureSaveBtn">
-                                <i class="bi bi-check-lg"></i> Save to Farm
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -3388,12 +1975,6 @@
         </div>
     </div>
 
-    <!-- Full-screen loading overlay (shown while app initialises after login) -->
-    <div id="appLoadingOverlay" class="page-loading" style="flex-direction:column;gap:1rem;">
-        <div class="page-loading-spinner"></div>
-        <p style="color:#6f4e37;font-weight:600;margin:0;">Loading your workspace…</p>
-    </div>
-
     <!-- Main App Container -->
     <div id="app-container" class="d-none">
         <!-- Sidebar Overlay (for mobile) -->
@@ -3414,8 +1995,7 @@
                     <!-- User Profile -->
                     <div class="user-profile" id="userProfile" style="display: none; padding: 1rem; border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 1rem;">
                         <div class="d-flex align-items-center gap-3">
-                            <img class="user-avatar" id="userAvatar" src="" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: none;">
-                            <div class="user-avatar" id="userAvatarInitials" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">U</div>
+                            <div class="user-avatar" id="userAvatar" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">U</div>
                             <div class="user-info flex-grow-1">
                                 <div class="user-name" id="userName" style="font-weight: bold; font-size: 0.875rem;">User Name</div>
                                 <div class="user-role" id="userRoleDisplay" style="font-size: 0.75rem; color: #6c757d;">Farmer</div>
@@ -3697,128 +2277,6 @@
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Ken Burns Hero Slideshow Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const slides = document.querySelectorAll('.hero-slide');
-            let currentSlide = 0;
-            
-            if (slides.length > 0) {
-                setInterval(() => {
-                    // Fade out current slide
-                    slides[currentSlide].classList.remove('active');
-                    
-                    // Move to next slide
-                    currentSlide = (currentSlide + 1) % slides.length;
-                    
-                    // Fade in new slide
-                    slides[currentSlide].classList.add('active');
-                }, 6000); // Change every 6 seconds
-            }
-        });
-    </script>
-    
-    <!-- Landing Page Stats Script -->
-    <script>
-        async function loadLandingPageStats() {
-            try {
-                const statsRes = await fetch('/api/v2/admin/public-stats', {
-                    credentials: 'include'
-                });
-                
-                if (statsRes.ok) {
-                    const stats = await statsRes.json();
-                    
-                    const farmersCount = stats.total_farmers || stats.total_farms || 0;
-                    const coopsCount = stats.total_cooperatives || 0;
-                    const complianceRate = Math.round(stats.compliance_rate) || 0;
-                    
-                    animateCounter('farmersCount', farmersCount, '+', 1500);
-                    animateCounter('complianceRate', complianceRate, '%', 1200);
-                    animateCounter('coopsCount', coopsCount, '+', 1500);
-                } else {
-                    showDashValues();
-                }
-                
-            } catch(e) {
-                console.log('Stats loading error', e);
-                showDashValues();
-            }
-        }
-        
-        function showDashValues() {
-            const farmersEl = document.getElementById('farmersCount');
-            const complianceEl = document.getElementById('complianceRate');
-            const coopsEl = document.getElementById('coopsCount');
-            
-            if (farmersEl) farmersEl.textContent = '--';
-            if (complianceEl) complianceEl.textContent = '--';
-            if (coopsEl) coopsEl.textContent = '--';
-        }
-        
-        function animateCounter(elementId, target, suffix, duration) {
-            const element = document.getElementById(elementId);
-            if (!element) return;
-            
-            const start = 0;
-            const increment = target / (duration / 16);
-            let current = start;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    current = target;
-                    clearInterval(timer);
-                }
-                element.textContent = Math.floor(current).toLocaleString() + suffix;
-            }, 16);
-        }
-        
-        // Load stats when page loads
-        document.addEventListener('DOMContentLoaded', loadLandingPageStats);
-
-        // Active nav link on scroll
-        const sections = document.querySelectorAll('section[id]');
-        const navLinks = document.querySelectorAll('.nav-link-modern');
-
-        window.addEventListener('scroll', () => {
-            let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                const sectionHeight = section.clientHeight;
-                if (scrollY >= sectionTop - 200) {
-                    current = section.getAttribute('id');
-                }
-            });
-
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href') === '#' + current) {
-                    link.classList.add('active');
-                }
-            });
-        });
-
-        // Smooth scroll for nav links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                const href = this.getAttribute('href');
-                if (!href || href === '#') return;
-                e.preventDefault();
-                const target = document.querySelector(href);
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
-                    // Close mobile menu if open
-                    const navbarCollapse = document.querySelector('.navbar-collapse');
-                    if (navbarCollapse && navbarCollapse.classList.contains('show')) {
-                        navbarCollapse.classList.remove('show');
-                    }
-                }
-            });
-        });
-    </script>
-    
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
@@ -3841,74 +2299,12 @@
                 icon.classList.add('bi-eye');
             }
         }
-
-        // Toggle country dropdown
-        function toggleCountryDropdown(btnId, menuId) {
-            var btn = document.getElementById(btnId);
-            var menu = document.getElementById(menuId);
-            
-            // Close all other dropdowns first
-            document.querySelectorAll('.country-dropdown-menu').forEach(function(m) {
-                if (m.id !== menuId) {
-                    m.classList.remove('show');
-                }
-            });
-            
-            // Toggle this dropdown
-            menu.classList.toggle('show');
-        }
-
-        // Handle country option click
-        document.querySelectorAll('.country-option').forEach(function(opt) {
-            opt.addEventListener('click', function() {
-                var value = this.getAttribute('data-value');
-                var flag = this.getAttribute('data-flag');
-                var text = this.textContent.trim();
-                var countryName = text.split('(')[0].trim();
-                
-                // Find the parent phone-input-group
-                var inputGroup = this.closest('.phone-input-group');
-                var btn = inputGroup.querySelector('.country-dropdown-btn');
-                var menu = inputGroup.querySelector('.country-dropdown-menu');
-                var hiddenInput = inputGroup.querySelector('input[type="hidden"]');
-                
-                // Update button
-                btn.innerHTML = '<span class="fi fi-' + flag + ' fis"></span> ' + countryName + ' (' + value + ') <span class="caret">▼</span>';
-                hiddenInput.value = value;
-                
-                // Hide dropdown
-                menu.classList.remove('show');
-            });
-        });
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.phone-input-group')) {
-                document.querySelectorAll('.country-dropdown-menu').forEach(function(m) {
-                    m.classList.remove('show');
-                });
-            }
-        });
-</script>
-    
+    </script>
+    <!-- html2canvas for screenshots -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- App JS -->
-    <script src="js/config.js?v=2500000"></script>
-    <script src="js/api.js?v=600000"></script>
-    <script>
-        // Configure API base URL based on environment
-        window.API_URL = (function() {
-            // Always use production API server
-            return 'https://dev.plotra.eu/api/v2';
-        })();
-        console.log('API URL:', window.API_URL);
-    </script>
-    <script src="js/app.js?v=18000000"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
     <script src="js/farmer-profile.js"></script>
-    <script>
-        // Show/hide loading overlay for data fetching - disabled for faster load
-        function showLoader() {}
-        function hideLoader() {}
-    </script>
 </body>
 </html>
