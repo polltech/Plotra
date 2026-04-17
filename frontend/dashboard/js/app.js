@@ -133,16 +133,18 @@ class PlotraDashboard {
     }
 
     showLandingPage() {
-        console.log('Showing landing page...');
         document.body.classList.remove('auth-active');
         document.documentElement.classList.remove('pre-auth');
         const landingPage = document.getElementById('landing-page');
         const appContainer = document.getElementById('app-container');
         if (landingPage) {
             landingPage.classList.remove('d-none');
-            landingPage.style.removeProperty('display');
+            landingPage.style.cssText = '';
         }
-        if (appContainer) appContainer.classList.add('d-none');
+        if (appContainer) {
+            appContainer.classList.add('d-none');
+            appContainer.style.cssText = '';
+        }
     }
 
     subscribeNewsletter() {
@@ -607,10 +609,13 @@ class PlotraDashboard {
         const appContainer = document.getElementById('app-container');
         const landingPage = document.getElementById('landing-page');
 
-        if (appContainer) appContainer.classList.remove('d-none');
+        // Force visibility via inline styles — overrides any CSS cascade issues
+        if (appContainer) {
+            appContainer.classList.remove('d-none');
+            appContainer.style.cssText = 'display:block!important;visibility:visible!important;opacity:1!important;';
+        }
         if (landingPage) {
-            landingPage.classList.add('d-none');
-            landingPage.style.display = 'none';
+            landingPage.style.cssText = 'display:none!important;';
         }
 
         this.loadCurrentUser().then(() => {
